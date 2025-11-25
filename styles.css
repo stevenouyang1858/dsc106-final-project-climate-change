@@ -18,6 +18,40 @@ h1 {
     color: #333;
 }
 
+
+.line {
+  fill: none;
+  stroke-width: 2px;
+}
+
+.line.historical { stroke: black; }
+.line.ssp126 { stroke: green; }
+.line.ssp245 { stroke: blue; }
+.line.ssp370 { stroke: orange; }
+.line.ssp585 { stroke: red; }
+.line.prediction { fill: none; stroke-width: 2px; }
+
+.dot { stroke-width: 1px; }
+.dot.historical { fill: black; }
+.dot.ssp126 { fill: green; }
+.dot.ssp245 { fill: blue; }
+.dot.ssp370 { fill: orange; }
+.dot.ssp585 { fill: red; }
+
+.tooltip {
+    font-size: 12px;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 5px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+
+
+
+
+
 svg#map {
   width: 960px;
   height: 500px;
