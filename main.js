@@ -1,5 +1,6 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
+<<<<<<< HEAD
 
 
 
@@ -266,6 +267,8 @@ drawCO2LineChart(
 
 //MAP INTERACTION
 
+=======
+>>>>>>> parent of bb70c64 (added first draft interactive line)
 const svg = d3.select("#map");
 const width = +svg.attr("width") || 960;
 const height = +svg.attr("height") || 500;
