@@ -1,8 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-<<<<<<< HEAD
-
-
 
 
 // line plot interaction
@@ -108,18 +105,9 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("fill", "none")
             .attr("stroke-width", 2)
             .attr("d", line);
-
-        //draw historical dots
-        svg.append("path")
-            .datum(historical)
-            .attr("class", "line historical")
-            .attr("stroke", "black")
-            .attr("fill", "none")
-            .attr("stroke-width", 2)
-            .attr("d", line);
-
+            
         // legend
-        drawLegend(svg, width);
+        drawLegend(svg, width, colorMap);
 
         function drawPredictionLines(selectedScenarios) {
             svg.selectAll(".line.prediction").remove();
@@ -250,8 +238,8 @@ function drawLegend(svg, width, colorMap) {
 // Call the function
 drawCO2LineChart(
     "linechart",
-    "/data/co2mass_historical_1950_2014_yearly.csv",
-    "/data/co2mass_ssp_predictions_yearly.csv"
+    "./data/co2mass_historical_1950_2014_yearly.csv",
+    "./data/co2mass_ssp_predictions_yearly.csv"
 );
 
 
@@ -267,8 +255,6 @@ drawCO2LineChart(
 
 //MAP INTERACTION
 
-=======
->>>>>>> parent of bb70c64 (added first draft interactive line)
 const svg = d3.select("#map");
 const width = +svg.attr("width") || 960;
 const height = +svg.attr("height") || 500;
