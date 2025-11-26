@@ -235,7 +235,7 @@ function drawLegend(svg, width, colorMap) {
 }
 
 
-// Call the function
+// Call line function
 drawCO2LineChart(
     "linechart",
     "./data/co2mass_historical_1950_2014_yearly.csv",
