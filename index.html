@@ -6,8 +6,6 @@
     <title>Climate Change</title>
     <link rel="stylesheet" href="styles.css">
     <script type="module" src="main.js"></script> 
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://d3js.org/topojson.v3.min.js"></script>
 
 </head>
 <body>
@@ -15,17 +13,43 @@
 
     
     <!--scatter plot-->
+
+    <div id="scatterplot"></div>
+
     
     <!--interactive line plot-->
     
-    <div id="ssp-options">
-        <label><input type="checkbox" value="ssp126" checked> SSP1-2.6</label>
-        <label><input type="checkbox" value="ssp245" checked> SSP2-4.5</label>
-        <label><input type="checkbox" value="ssp370" checked> SSP3-7.0</label>
-        <label><input type="checkbox" value="ssp585" checked> SSP5-8.5</label>
+    <div id="linechart-wrapper">
+        <div id="story">
+            <section data-step="0">
+                <p>Historical CO₂ data is shown here.</p>
+            </section>
+            <section data-step="1">
+                <p>Adding SSP2-4.5 prediction to see moderate emission scenario.</p>
+            </section>
+            <section data-step="2">
+                <p>Adding SSP3-7.0 and SSP5-8.5 for higher emissions scenarios.</p>
+            </section>
+            <section data-step="3">
+                <p>Overlaying SSP1-2.6 for low emissions scenario.</p>
+            </section>
+            <section data-step="4">
+                <p>Now you can select which SSP lines to display interactively.</p>
+                <div id="ssp-options">
+                    <label><input type="checkbox" value="ssp126" checked> SSP1-2.6</label>
+                    <label><input type="checkbox" value="ssp245" checked> SSP2-4.5</label>
+                    <label><input type="checkbox" value="ssp370" checked> SSP3-7.0</label>
+                    <label><input type="checkbox" value="ssp585" checked> SSP5-8.5</label>
+                </div>
+            </section>
+        </div>
+
+        <div id="linechart-container">
+            <div id="linechart"></div>
+        </div>
     </div>
 
-    `<div id="linechart"></div>
+    <div id="story-text"></div>
 
     <!--Interactive Map -->
     
@@ -53,5 +77,6 @@
     </p>
 
 
+    <script type="module" src="main.js"></script>
 </body>
 </html>

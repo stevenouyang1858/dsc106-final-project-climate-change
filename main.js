@@ -1,221 +1,130 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+import scrollama from 'https://cdn.jsdelivr.net/npm/scrollama@3.2.0/+esm';
 
 
 
-// line plot interaction
-function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
-    const margin = {top: 20, right: 120, bottom: 40, left: 140};
-    const width = 900 - margin.left - margin.right;
+//scatter plot
+
+function drawCO2TempScatter(containerId, csvPath) {
+    const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+    const width = 800 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
-    // Remove SVG
+    // Remove any existing SVG
     d3.select(`#${containerId}`).selectAll("svg").remove();
 
     const svg = d3.select(`#${containerId}`)
-      .append("svg")
+        .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
       .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Scale
-    const x = d3.scaleLinear().range([0, width]);
-    const y = d3.scaleLinear().range([height, 0]);
+    // load
+    d3.csv(csvPath, d => ({
+        year: +d.time,
+        co2: +d.co2 / 1e14,
+        temp: +d.temp
+    })).then(data => {
+        // color scale by year
+        const color = d3.scaleSequential()
+            .domain(d3.extent(data, d => d.year))
+            .interpolator(d3.interpolateViridis);
 
-    const line = d3.line()
-      .x(d => x(d.year))
-      .y(d => y(d.value));
+        // Scales
+        const x = d3.scaleLinear()
+            .domain([d3.min(data, d => d.co2) * 0.95, d3.max(data, d => d.co2) * 1.05])
+            .range([0, width]);
 
-    const colorMap = {
-        ssp126: "green",
-        ssp245: "blue",
-        ssp370: "orange",
-        ssp585: "red"
-    };
+        const y = d3.scaleLinear()
+            .domain([d3.min(data, d => d.temp) * 1, d3.max(data, d => d.temp) * 1.1])
+            .range([height, 0]);
 
-    const tooltip = d3.select("body")
-        .append("div")
+        // Axes
+        svg.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x));
+        
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        // axis label
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height + 45)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("CO₂ Mass (10,000,000,000,000 kg)");
+
+        svg.append("text")
+            .attr("x", -height / 2)
+            .attr("y", -50)
+            .attr("transform", "rotate(-90)")
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("Surface Temperature Anomoly (°C)");
+
+        // tooltip
+        const tooltip = d3.select("body")
+            .append("div")
             .attr("class", "tooltip")
-            .style("position", "absolute")
+            .style("position", "fixed")
             .style("background", "white")
             .style("border", "1px solid #ccc")
             .style("padding", "5px")
             .style("pointer-events", "none")
             .style("opacity", 0);
 
-    // load csv
-    Promise.all([
-        d3.csv(historicalCSV, d => ({year: +d.time, value: +d.co2mass})),
-        d3.csv(predictionsCSV, d => ({
-            year: +d.time,
-            ssp126: +d["SSP1-2.6"],
-            ssp245: +d["SSP2-4.5"],
-            ssp370: +d["SSP3-7.0"],
-            ssp585: +d["SSP5-8.5"]
-        }))
-    ]).then(([historical, predictions]) => {
-
-        // set domain
-        const allYears = historical.map(d => d.year).concat(predictions.map(d => d.year));
-        x.domain(d3.extent(allYears));
-
-        const allValues = [
-            ...historical.map(d => d.value),
-            ...predictions.flatMap(d => [d.ssp126, d.ssp245, d.ssp370, d.ssp585])
-        ];
-        const yMin = d3.min(allValues) * 0.95; // 5% padding below
-        const yMax = d3.max(allValues) * 1.05; // 5% padding above
-        y.domain([yMin, yMax]);
-
-        // axes
-        svg.append("g")
-            .attr("class", "x axis")
-            .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
-
-        svg.append("g")
-            .attr("class", "y axis")
-            .call(d3.axisLeft(y));
-
-        svg.append("line")
-            .attr("x1", x(2015))
-            .attr("x2", x(2015))
-            .attr("y1", 0)
-            .attr("y2", height)
-            .attr("stroke", "darkblue")
-            .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "6 2");
-
-        const hoverLine = svg.append("line")
-            .attr("class", "hover-line")
-            .attr("y1", 0)
-            .attr("y2", height)
-            .attr("stroke", "gray")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "4 2")
-            .style("opacity", 0);
-
-        
-        
-        //draw historical line
-        svg.append("path")
-            .datum(historical)
-            .attr("class", "line historical")
-            .attr("stroke", "black")
-            .attr("fill", "none")
-            .attr("stroke-width", 2)
-            .attr("d", line);
-            
-        // legend
-        drawLegend(svg, width, colorMap);
-
-        function drawPredictionLines(selectedScenarios) {
-            svg.selectAll(".line.prediction").remove();
-            svg.selectAll(".dot.prediction").remove();
-
-            selectedScenarios.forEach(key => {
-                // line
-                svg.append("path")
-                    .datum(predictions.map(d => ({ year: d.year, value: d[key] })))
-                    .attr("class", `line prediction ${key}`)
-                    .attr("stroke", colorMap[key])
-                    .attr("fill", "none")
-                    .attr("stroke-width", 2)
-                    .attr("d", line);
-
-                // points
-                svg.selectAll(`.dot.${key}`)
-                    .data(predictions.map(d => ({ year: d.year, value: d[key] })))
-                    .join("circle")
-                    .attr("class", `dot prediction ${key}`)
-                    .attr("cx", d => x(d.year))
-                    .attr("cy", d => y(d.value))
-                    .attr("r", 3)
-                    .attr("fill", colorMap[key]);
-            });
-        }
-
-        //initial draw
-        const initialScenarios = Object.keys(colorMap);
-        drawPredictionLines(initialScenarios);
-
-
-        svg.append("rect")
-            .attr("class", "overlay")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("fill", "none")
-            .attr("pointer-events", "all")
-            .on("mousemove", function (event) {
-                const [mx] = d3.pointer(event);
-                const yearScale = x.invert(mx);
-                const nearestYear = allYears.reduce((a, b) => Math.abs(b - yearScale) < Math.abs(a - yearScale) ? b : a);
-
-                const historicalValue = historical.find(d => d.year === nearestYear)?.value ?? "N/A";
-
-                const selectedScenarios = Array.from(document.querySelectorAll('#ssp-options input:checked'))
-                    .map(input => input.value);
-
-                const predictionValues = {};
-                selectedScenarios.forEach(key => {
-                    const val = predictions.find(d => d.year === nearestYear)?.[key];
-                    if (val !== undefined) predictionValues[key] = val;
-                });
-
-                let text = `Year: ${nearestYear}`;
-                if (nearestYear < 2015) {
-                    const historicalValue = historical.find(d => d.year === nearestYear)?.value ?? "N/A";
-                    text += `<br>Historical: ${historicalValue}`;
-                }
-                for (const [key, val] of Object.entries(predictionValues)) {
-                    text += `<br>${key}: ${val}`;
-                }
-
-                // Hide historical dots on predictive years
-                svg.selectAll(".dot.historical")
-                    .style("opacity", nearestYear < 2015 ? 1 : 0);
-
-                tooltip.html(text)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY + 10) + "px")
+        // points
+        svg.selectAll("circle")
+            .data(data)
+            .join("circle")
+            .attr("cx", d => x(d.co2))
+            .attr("cy", d => y(d.temp))
+            .attr("r", 5)
+            .attr("fill", d => color(d.year))
+            .on("mouseover", (event, d) => {
+                tooltip.html(`Year: ${d.year}<br>CO₂: ${d.co2}<br>Temp: ${d.temp}`)
+                    .style("left", (event.clientX + 10) + "px")
+                    .style("top", (event.clientY + 10) + "px")
                     .style("opacity", 0.9);
-                
-                hoverLine
-                    .attr("x1", x(nearestYear))
-                    .attr("x2", x(nearestYear))
-                    .style("opacity", 1);
             })
-            .on("mouseout", () => {
-                tooltip.style("opacity", 0);
-                hoverLine.style("opacity", 0);
-            });
-
-        // Checkbox listener
-        d3.selectAll('#ssp-options input[type="checkbox"]').on('change', function () {
-            const selectedScenarios = Array.from(document.querySelectorAll('#ssp-options input:checked'))
-                .map(input => input.value);
-            drawPredictionLines(selectedScenarios);
-        });
-
+            .on("mouseout", () => tooltip.style("opacity", 0));
     }).catch(err => console.error(err));
-}
+};
 
-// Legend function
+
+
+
+
+
+
+
+
+
+
+
+
+// LINE PLOT
+
+let visibleLines = [];
 function drawLegend(svg, width, colorMap) {
     const legendData = [
         { name: "Historical", color: "black" },
-        { name: "SSP1-2.6", color: "green" },
+        { name: "SSP1-2.6", color: "teal" },
         { name: "SSP2-4.5", color: "blue" },
         { name: "SSP3-7.0", color: "orange" },
-        { name: "SSP5-8.5", color: "red" },
+        { name: "SSP5-8.5", color: "red" }
     ];
 
+    // Remove old legend if any
     svg.selectAll(".legend").remove();
 
     const legend = svg.append("g")
         .attr("class", "legend")
-        .attr("transform", `translate(${width + 10}, 10)`);
+        .attr("transform", `translate(${width + 20}, 20)`); // position right of chart
 
+    // draw colored squares
     legend.selectAll("rect")
         .data(legendData)
         .join("rect")
@@ -225,6 +134,7 @@ function drawLegend(svg, width, colorMap) {
         .attr("height", 12)
         .attr("fill", d => d.color);
 
+    // draw labels
     legend.selectAll("text")
         .data(legendData)
         .join("text")
@@ -234,13 +144,254 @@ function drawLegend(svg, width, colorMap) {
         .attr("font-size", "12px");
 }
 
+//global variable for line chart
+let lineChartState = {};
 
-// Call line function
-drawCO2LineChart(
-    "linechart",
-    "./data/co2mass_historical_1950_2014_yearly.csv",
-    "./data/co2mass_ssp_predictions_yearly.csv"
-);
+// drawing line chart
+function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
+    const margin = { top: 20, right: 120, bottom: 40, left: 140 };
+    const width = 900 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
+
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    // Remove any existing SVG
+    d3.select(`#${containerId}`).selectAll("svg").remove();
+
+    const svg = d3.select(`#${containerId}`)
+      .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleLinear().range([0, width]);
+    const y = d3.scaleLinear().range([height, 0]);
+
+    const line = d3.line()
+        .x(d => x(d.year))
+        .y(d => y(d.value));
+
+    const colorMap = {
+        ssp126: "teal",
+        ssp245: "blue",
+        ssp370: "orange",
+        ssp585: "red"
+    };
+
+    const tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip line-tooltip")
+        .style("position", "fixed")
+        .style("background", "white")
+        .style("border", "1px solid #ccc")
+        .style("padding", "5px")
+        .style("pointer-events", "none")
+        .style("opacity", 0);
+
+    // Load CSV data
+    Promise.all([
+        d3.csv(historicalCSV, d => ({ year: +d.time, value: +d.co2mass / 1e14 })),
+        d3.csv(predictionsCSV, d => ({
+            year: +d.time,
+            ssp126: +d["SSP1-2.6"] / 1e14,
+            ssp245: +d["SSP2-4.5"] / 1e14,
+            ssp370: +d["SSP3-7.0"] / 1e14,
+            ssp585: +d["SSP5-8.5"] / 1e14
+        }))
+    ]).then(([historical, predictions]) => {
+
+        const allYears = historical.map(d => d.year).concat(predictions.map(d => d.year));
+        x.domain(d3.extent(allYears));
+
+        const allValues = [
+            ...historical.map(d => d.value),
+            ...predictions.flatMap(d => [d.ssp126, d.ssp245, d.ssp370, d.ssp585])
+        ];
+        y.domain([d3.min(allValues)*0.95, d3.max(allValues)*1.05]);
+
+        // Axes
+        svg.append("g").attr("class", "x axis")
+            .attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
+        svg.append("g").attr("class", "y axis").call(d3.axisLeft(y));
+
+
+        //vertical line at 2015
+        svg.append("line")
+            .attr("class", "divider-line")
+            .attr("x1", x(2015))
+            .attr("x2", x(2015))
+            .attr("y1", 0)
+            .attr("y2", height)
+            .attr("stroke", "black")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "4 2");
+        // Historical line
+        svg.append("path")
+            .datum(historical)
+            .attr("class", "line historical")
+            .attr("stroke", "black")
+            .attr("fill", "none")
+            .attr("stroke-width", 2)
+            .attr("d", line);
+
+        // Hover overlay line
+        const hoverLine = svg.append("line")
+            .attr("class", "hover-line")
+            .attr("y1", 0).attr("y2", height)
+            .attr("stroke", "gray")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "4 2")
+            .style("opacity", 0);
+
+        svg.append("rect")
+    .attr("class", "overlay")
+    .attr("width", width).attr("height", height)
+    .attr("fill", "none")
+    .attr("pointer-events", "all")
+    .on("mousemove", function(event) {
+    const [mx] = d3.pointer(event);
+    const yearScale = x.invert(mx);
+
+    lastMouseX = event.clientX;
+    lastMouseY = event.clientY;
+
+    const nearestYear = allYears.reduce((a, b) =>
+        Math.abs(b - yearScale) < Math.abs(a - yearScale) ? b : a
+    );
+
+    hoverLine
+        .attr("x1", x(nearestYear))
+        .attr("x2", x(nearestYear))
+        .style("opacity", 1);
+
+    let text = `Year: ${nearestYear}<br>`;
+    const hist = historical.find(d => d.year === nearestYear);
+    if(hist) text += `Historical: ${hist.value}<br>`;
+
+    predictions.forEach(row => {
+        if(row.year === nearestYear){
+            visibleLines.forEach(key => {
+                if(row[key] !== undefined) text += `${key}: ${row[key]}<br>`;
+            });
+        }
+    });
+
+    tooltip.html(text)
+        .style("left", (lastMouseX + 15) + "px")
+        .style("top", (lastMouseY + 15) + "px") 
+        .style("opacity", 0.9);
+})
+    .on("mouseout", () => {
+        tooltip.style("opacity", 0);
+        hoverLine.style("opacity", 0);
+    });
+
+    window.addEventListener("scroll", () => {
+    if (tooltip.style("opacity") > 0) { 
+        tooltip
+            .style("left", (lastMouseX + 15) + "px")
+            .style("top", (lastMouseY + 15) + "px");
+    }
+});
+
+
+        // Draw legend
+        drawLegend(svg, width, colorMap);
+
+        // Save state for scrollytelling
+        lineChartState = { svg, x, y, line, colorMap, predictions, width, height };
+
+        // setup scrollama
+        setupScrollama();
+
+    }).catch(err => console.error(err));
+}
+
+// main part of scrollytelling
+function drawPredictionLine(key) {
+    const { svg, line, colorMap, predictions } = lineChartState;
+    svg.append("path")
+       .datum(predictions.map(d => ({ year: d.year, value: d[key] })))
+       .attr("class", `line prediction ${key}`)
+       .attr("stroke", colorMap[key])
+       .attr("fill", "none")
+       .attr("stroke-width", 2)
+       .attr("d", line);
+}
+
+function removePredictionLines() {
+    const { svg } = lineChartState;
+    svg.selectAll(".line.prediction").remove();
+}
+
+function drawSelectedPredictionLines(keys) {
+    removePredictionLines();
+    keys.forEach(k => drawPredictionLine(k));
+    visibleLines = keys;
+}
+
+function showText(text) {
+    d3.select("#story-text").html(text);
+}
+
+//Scrollama
+function setupScrollama() {
+    const scroller = scrollama();
+
+    scroller.setup({
+        step: "#story section",
+        offset: 0.5
+    }).onStepEnter(({ index }) => {
+        console.log("Step triggered:", index); // sanity check
+        removePredictionLines();
+
+        switch(index) {
+            case 0:
+                showText("Historical CO₂ data is shown here.");
+                visibleLines = [];
+                break;
+            case 1:
+                drawPredictionLine("ssp245");
+                visibleLines = ["ssp245"];
+                showText("Adding SSP2-4.5: moderate emissions scenario.");
+                break;
+            case 2:
+                drawPredictionLine("ssp245");
+                drawPredictionLine("ssp370");
+                drawPredictionLine("ssp585");
+                visibleLines = ["ssp245","ssp370","ssp585"];
+                showText("Adding SSP3-7.0 and SSP5-8.5: high emissions scenarios.");
+                break;
+            case 3:
+                drawPredictionLine("ssp245");
+                drawPredictionLine("ssp370");
+                drawPredictionLine("ssp585");
+                drawPredictionLine("ssp126");
+                visibleLines = ["ssp245","ssp370","ssp585","ssp126"];
+                showText("Overlaying SSP1-2.6: low emissions scenario.");
+                break;
+            case 4:
+                drawSelectedPredictionLines(["ssp126","ssp245","ssp370","ssp585"]);
+                visibleLines = ["ssp126","ssp245","ssp370","ssp585"];
+                showText("All lines visible: select which SSP lines to display using checkboxes.");
+
+                d3.selectAll('#ssp-options input[type="checkbox"]').on('change', function() {
+                    const selectedScenarios = Array.from(document.querySelectorAll('#ssp-options input:checked'))
+                        .map(input => input.value);
+                    drawSelectedPredictionLines(selectedScenarios);
+                });
+                break;
+        }
+    });
+
+    window.addEventListener("resize", scroller.resize);
+    
+}
+
+
+
 
 
 
@@ -273,3 +424,14 @@ d3.json("./countries.geojson").then(world => {
       .attr("class", "country")    // use CSS styling
       .attr("d", path);
 });
+
+
+
+drawCO2TempScatter("scatterplot", "./data/co2_surfacetemp_biannual_scatterplot_1950_2014.csv");
+
+// Call line function
+drawCO2LineChart(
+    "linechart",
+    "./data/co2mass_historical_1950_2014_yearly.csv",
+    "./data/co2mass_ssp_predictions_yearly.csv"
+);

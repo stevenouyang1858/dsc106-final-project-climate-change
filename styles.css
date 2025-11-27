@@ -36,3 +36,59 @@ svg#map {
 .country:hover {
   fill: orange;
 }
+
+#story section {
+    min-height: 80vh;
+    padding: 2em;
+    border-bottom: 1px solid #ccc;
+}
+
+/* Container for scroll-driven line chart */
+#linechart-wrapper {
+    display: flex;
+    flex-direction: row; /* left text, right chart */
+    align-items: flex-start;
+    gap: 40px; /* space between text and chart */
+    margin: 50px 20px; /* optional margin around the container */
+    width: 100%;
+    max-width: 1200px;
+}
+
+/* Scrollable text column */
+#story {
+    flex: 1;           /* takes available space on the left */
+    max-width: 400px;  /* optional limit for readability */
+}
+
+/* Sticky chart column */
+#linechart-container {
+    flex: 2;                  /* larger than text */
+    position: sticky;          /* stay in view */
+    top: 20px;                 /* distance from top while scrolling */
+    height: 500px;             /* match chart height */
+}
+
+/* Optional: smaller spacing for sections */
+#story section {
+    min-height: 80vh;
+    padding: 1em 0;
+    border-bottom: 1px solid #ccc;
+}
+
+.divider-line {
+    stroke: black;
+    stroke-width: 2;
+    stroke-dasharray: 4 2;
+}
+
+.tooltip {
+    position: fixed;      /* THIS IS THE KEY */
+    background: white;
+    padding: 6px 10px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 12px;
+    z-index: 9999;
+    opacity: 0;
+}
