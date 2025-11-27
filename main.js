@@ -64,6 +64,16 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("font-size", "14px")
             .text("Surface Temperature Anomoly (°C)");
 
+        // Add chart title
+        svg.append("text")
+            .attr("class", "chart-title")
+            .attr("x", width / 2)
+            .attr("y", -margin.top / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "600")
+            .text("CO₂ Mass vs Surface Temperature Anomaly");
+
         // tooltip
         const tooltip = d3.select("body")
             .append("div")
@@ -90,6 +100,106 @@ function drawCO2TempScatter(containerId, csvPath) {
                     .style("opacity", 0.9);
             })
             .on("mouseout", () => tooltip.style("opacity", 0));
+
+        // LINEAR REGRESSION
+        function linearRegression(points) {
+            const n = points.length;
+            const sumX = d3.sum(points, d => d.co2);
+            const sumY = d3.sum(points, d => d.temp);
+            const sumXY = d3.sum(points, d => d.co2 * d.temp);
+            const sumX2 = d3.sum(points, d => d.co2 * d.co2);
+
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            return { slope, intercept };
+        }
+
+        const { slope, intercept } = linearRegression(data);
+
+        // regression line endpoints (across full x-domain)
+        const xMin = d3.min(data, d => d.co2);
+        const xMax = d3.max(data, d => d.co2);
+
+        const extendedXMax = xMax * 1.05;
+
+        const regPoints = [
+            { co2: xMin, temp: slope * xMin + intercept },
+            { co2: extendedXMax, temp: slope * extendedXMax + intercept }
+        ];
+
+        // --- Draw regression line ---
+        svg.append("line")
+            .attr("x1", x(regPoints[0].co2))
+            .attr("y1", y(regPoints[0].temp))
+            .attr("x2", x(regPoints[1].co2))
+            .attr("y2", y(regPoints[1].temp))
+            .attr("stroke", "blue")
+            .attr("stroke-dasharray", "6 4") 
+            .attr("stroke-width", 2)
+            .attr("opacity", 0.8);
+
+        svg.append("path")
+            .datum(regPoints)
+            .attr("class", "regression-line-hover")
+            .attr("fill", "none")
+            .attr("stroke", "transparent")
+            .attr("stroke-width", 30)
+            .style("pointer-events", "stroke")
+            .attr("d", d3.line()
+                .x(d => x(d.co2))
+                .y(d => y(d.temp))
+            );
+        
+        const regTooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("position", "fixed")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("padding", "5px")
+            .style("pointer-events", "none")
+            .style("opacity", 0);
+
+        const hoverDot = svg.append("circle")
+            .attr("r", 6)
+            .attr("fill", "blue")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2)
+            .attr("opacity", 0);
+
+        svg.select(".regression-line-hover")
+            .on("mousemove", (event) => {
+                const mouseX = x.invert(event.offsetX - margin.left);
+
+                // clamp to regression range
+                const clampedX = Math.max(
+                    Math.min(mouseX, regPoints[1].co2),
+                    regPoints[0].co2
+                );
+
+                // compute predicted temp
+                const predTemp = slope * clampedX + intercept;
+
+                hoverDot
+                    .attr("cx", x(clampedX))
+                    .attr("cy", y(predTemp))
+                    .attr("opacity", 1);
+
+                regTooltip.html(
+                    `Predicted CO₂: ${clampedX.toFixed(2)}<br>` +
+                    `Predicted Surface Temperature Anomoly: ${predTemp.toFixed(3)}°C`
+                )
+                .style("left", (event.clientX + 10) + "px")
+                .style("top", (event.clientY + 10) + "px")
+                .style("opacity", 0.9);
+            })
+            .on("mouseout", () => {
+                regTooltip.style("opacity", 0);
+                hoverDot.attr("opacity", 0);
+            });
+
+
     }).catch(err => console.error(err));
 };
 
@@ -128,6 +238,7 @@ function drawLegend(svg, width, colorMap) {
     legend.selectAll("rect")
         .data(legendData)
         .join("rect")
+        .attr("class", d => "legend-rect legend-" + d.name.replaceAll('.', '').replaceAll('-', ''))
         .attr("x", 0)
         .attr("y", (d, i) => i * 20)
         .attr("width", 12)
@@ -138,6 +249,7 @@ function drawLegend(svg, width, colorMap) {
     legend.selectAll("text")
         .data(legendData)
         .join("text")
+        .attr("class", d => "legend-label legend-" + d.name.replaceAll('.', '').replaceAll('-', ''))
         .attr("x", 18)
         .attr("y", (d, i) => i * 20 + 10)
         .text(d => d.name)
@@ -149,7 +261,7 @@ let lineChartState = {};
 
 // drawing line chart
 function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
-    const margin = { top: 20, right: 120, bottom: 40, left: 140 };
+    const margin = { top: 60, right: 120, bottom: 40, left: 140 };
     const width = 900 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
@@ -216,6 +328,31 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
         svg.append("g").attr("class", "y axis").call(d3.axisLeft(y));
 
+        //title
+        svg.append("text")
+            .attr("class", "chart-title")
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "600")
+            .text("Historical & Projected Atmospheric CO₂ Levels");
+        //axis label
+        svg.append("text")
+            .attr("class", "x axis-label")
+            .attr("text-anchor", "middle")
+            .attr("x", width / 2)
+            .attr("y", height + 35)
+            .text("Year");
+
+        svg.append("text")
+            .attr("class", "y axis-label")
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -height / 2)
+            .attr("y", -60)
+            .text("Atmospheric CO₂ mass (× 10¹⁴ kg)");
+
 
         //vertical line at 2015
         svg.append("line")
@@ -227,6 +364,7 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("stroke", "black")
             .attr("stroke-width", 2)
             .attr("stroke-dasharray", "4 2");
+
         // Historical line
         svg.append("path")
             .datum(historical)
@@ -246,55 +384,55 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .style("opacity", 0);
 
         svg.append("rect")
-    .attr("class", "overlay")
-    .attr("width", width).attr("height", height)
-    .attr("fill", "none")
-    .attr("pointer-events", "all")
-    .on("mousemove", function(event) {
-    const [mx] = d3.pointer(event);
-    const yearScale = x.invert(mx);
+            .attr("class", "overlay")
+            .attr("width", width).attr("height", height)
+            .attr("fill", "none")
+            .attr("pointer-events", "all")
+            .on("mousemove", function(event) {
+            const [mx] = d3.pointer(event);
+            const yearScale = x.invert(mx);
 
-    lastMouseX = event.clientX;
-    lastMouseY = event.clientY;
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
 
-    const nearestYear = allYears.reduce((a, b) =>
-        Math.abs(b - yearScale) < Math.abs(a - yearScale) ? b : a
-    );
+            const nearestYear = allYears.reduce((a, b) =>
+                Math.abs(b - yearScale) < Math.abs(a - yearScale) ? b : a
+            );
 
-    hoverLine
-        .attr("x1", x(nearestYear))
-        .attr("x2", x(nearestYear))
-        .style("opacity", 1);
+        hoverLine
+            .attr("x1", x(nearestYear))
+            .attr("x2", x(nearestYear))
+            .style("opacity", 1);
 
-    let text = `Year: ${nearestYear}<br>`;
-    const hist = historical.find(d => d.year === nearestYear);
-    if(hist) text += `Historical: ${hist.value}<br>`;
+        let text = `Year: ${nearestYear}<br>`;
+        const hist = historical.find(d => d.year === nearestYear);
+        if(hist) text += `Historical: ${hist.value}<br>`;
 
-    predictions.forEach(row => {
-        if(row.year === nearestYear){
-            visibleLines.forEach(key => {
-                if(row[key] !== undefined) text += `${key}: ${row[key]}<br>`;
-            });
-        }
-    });
+        predictions.forEach(row => {
+            if(row.year === nearestYear){
+                visibleLines.forEach(key => {
+                    if(row[key] !== undefined) text += `${key}: ${row[key]}<br>`;
+                });
+            }
+        });
 
-    tooltip.html(text)
-        .style("left", (lastMouseX + 15) + "px")
-        .style("top", (lastMouseY + 15) + "px") 
-        .style("opacity", 0.9);
-})
+        tooltip.html(text)
+            .style("left", (lastMouseX + 15) + "px")
+            .style("top", (lastMouseY + 15) + "px") 
+            .style("opacity", 0.9);
+    })
     .on("mouseout", () => {
         tooltip.style("opacity", 0);
         hoverLine.style("opacity", 0);
     });
 
     window.addEventListener("scroll", () => {
-    if (tooltip.style("opacity") > 0) { 
-        tooltip
-            .style("left", (lastMouseX + 15) + "px")
-            .style("top", (lastMouseY + 15) + "px");
-    }
-});
+        if (tooltip.style("opacity") > 0) { 
+            tooltip
+                .style("left", (lastMouseX + 15) + "px")
+                .style("top", (lastMouseY + 15) + "px");
+        }
+    });
 
 
         // Draw legend
@@ -318,12 +456,45 @@ function drawPredictionLine(key) {
        .attr("stroke", colorMap[key])
        .attr("fill", "none")
        .attr("stroke-width", 2)
-       .attr("d", line);
+       .attr("d", line)
+       .transition()
+       .duration(400)
+       .attr("opacity", 1);
 }
 
 function removePredictionLines() {
     const { svg } = lineChartState;
-    svg.selectAll(".line.prediction").remove();
+    svg.selectAll(".line.prediction").transition()
+        .duration(400)
+        .attr("opacity", 0)
+        .remove();;
+}
+function updateLegendHighlight() {
+    const legendMap = {
+        historical: "Historical",
+        ssp126: "SSP1-2.6",
+        ssp245: "SSP2-4.5",
+        ssp370: "SSP3-7.0",
+        ssp585: "SSP5-8.5"
+    };
+
+    // Reset all legend items to dim
+    d3.selectAll(".legend-rect, .legend-label").classed("legend-active", false);
+
+    // Activate only visible lines
+    visibleLines.forEach(key => {
+        const name = legendMap[key];
+        const cls = ".legend-" + name.replaceAll('.', '').replaceAll('-', '');
+
+        d3.selectAll(cls).classed("legend-active", true);
+    });
+
+    // Always highlight historical
+    if (visibleLines.length === 0 || visibleLines.includes("historical")) {
+        d3.selectAll(".legend-Historical").classed("legend-active", true);
+    }
+
+    d3.selectAll(".legend-Historical").classed("legend-active", true);
 }
 
 function drawSelectedPredictionLines(keys) {
@@ -351,10 +522,12 @@ function setupScrollama() {
             case 0:
                 showText("Historical CO₂ data is shown here.");
                 visibleLines = [];
+                updateLegendHighlight();
                 break;
             case 1:
                 drawPredictionLine("ssp245");
                 visibleLines = ["ssp245"];
+                updateLegendHighlight();
                 showText("Adding SSP2-4.5: moderate emissions scenario.");
                 break;
             case 2:
@@ -362,6 +535,7 @@ function setupScrollama() {
                 drawPredictionLine("ssp370");
                 drawPredictionLine("ssp585");
                 visibleLines = ["ssp245","ssp370","ssp585"];
+                updateLegendHighlight();
                 showText("Adding SSP3-7.0 and SSP5-8.5: high emissions scenarios.");
                 break;
             case 3:
@@ -370,11 +544,13 @@ function setupScrollama() {
                 drawPredictionLine("ssp585");
                 drawPredictionLine("ssp126");
                 visibleLines = ["ssp245","ssp370","ssp585","ssp126"];
+                updateLegendHighlight();
                 showText("Overlaying SSP1-2.6: low emissions scenario.");
                 break;
             case 4:
                 drawSelectedPredictionLines(["ssp126","ssp245","ssp370","ssp585"]);
                 visibleLines = ["ssp126","ssp245","ssp370","ssp585"];
+                updateLegendHighlight();
                 showText("All lines visible: select which SSP lines to display using checkboxes.");
 
                 d3.selectAll('#ssp-options input[type="checkbox"]').on('change', function() {

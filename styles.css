@@ -92,3 +92,14 @@ svg#map {
     z-index: 9999;
     opacity: 0;
 }
+
+.legend-rect,
+.legend-label {
+    opacity: 0.3;      /* dim by default */
+    transition: opacity 0.3s;
+}
+
+.legend-active {
+    opacity: 1 !important;
+    font-weight: bold;
+}
