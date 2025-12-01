@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Global Warming: Stripes & Country Anomalies</title>
+  <link rel="stylesheet" href="tas_map_style.css" />
+</head>
+<body>
+  <h2>Global Warming: Climate Stripes & Country Anomalies</h2>
+
+  <div id="tooltip"></div>
+  <div id="stripe-container"></div>
+
+  <div id="info-panel">
+    <div id="info-text">
+      Hover a stripe to see the global temperature anomaly for that year.
+      Click a stripe to update the world map below.
+    </div>
+    <div class="legend-row">
+      <div class="legend-bar"></div>
+      <div class="legend-labels">
+        <span>Cooler than baseline</span>
+        <span>Warmer than baseline</span>
+      </div>
+    </div>
+    <div class="legend-row" style="margin-top:4px; font-size:11px; color:#aaa;">
+      <span class="map-legend-item">
+        <span class="map-legend-swatch" style="background:#666;"></span>
+        <span>Grey = no data for that country/year</span>
+      </span>      
+    </div>
+  </div>
+
+  <div id="map-container">
+    <div class="map-title-row">
+      <h3 id="map-title">Country Anomaly Map</h3>
+      <div class="map-year-label" id="map-year-label"></div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="tas_map_main.js"></script>
+</body>
+</html>
