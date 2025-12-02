@@ -956,19 +956,6 @@ function initStripesAndCountryMap() {
 }
 
 
-
-
-drawCO2TempScatter("scatterplot", "./data/co2_surfacetemp_biannual_scatterplot_1950_2014.csv");
-
-// Call line function
-drawCO2LineChart(
-    "linechart",
-    "./data/co2mass_historical_1950_2014_yearly.csv",
-    "./data/co2mass_ssp_predictions_yearly.csv"
-);
-
-drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
-
 function drawRegionalComparison(containerId, csvPath) {
     const margin = { top: 40, right: 200, bottom: 60, left: 80 };
     const width = 1000 - margin.left - margin.right;
