@@ -162,7 +162,7 @@ h1 {
 #regional-comparison, #decade-warming {
     margin: 20px auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     background-color: transparent;

@@ -957,36 +957,106 @@ function initStripesAndCountryMap() {
 
 
 function drawRegionalComparison(containerId, csvPath) {
-    const margin = { top: 40, right: 200, bottom: 60, left: 80 };
-    const width = 1000 - margin.left - margin.right;
+    const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+    const width = 900 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
-    d3.select(`#${containerId}`).selectAll("svg").remove();
+    const container = d3.select(`#${containerId}`)
+        .style("position", "relative")
+        .style("display", "flex")
+        .style("justify-content", "center")
+        .style("align-items", "flex-start")
+        .style("gap", "30px");
 
-    const svg = d3.select(`#${containerId}`)
+    // Clear old elements
+    container.selectAll("svg").remove();
+    container.selectAll(".tooltip-regional").remove();
+    container.selectAll(".country-controls").remove();
+    container.selectAll(".chart-wrapper").remove();
+
+    // --- chart wrapper (left) ---
+    const chartWrapper = container
+        .append("div")
+        .attr("class", "chart-wrapper");
+
+    const svg = chartWrapper
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-   
-    const defaultCountries = ["United States", "China", "India", "Brazil", "Russia", "Australia", "Canada", "Germany"];
+    const defaultCountries = ["USA", "China", "India", "Germany"];
     let selectedCountries = [...defaultCountries];
     let allData = null;
 
-    // Color scale for countries
     const countryColors = [
         "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
         "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
         "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5"
     ];
 
-    const colorScale = d3.scaleOrdinal()
-        .domain([])
-        .range(countryColors);
+    const colorScale = d3.scaleOrdinal().range(countryColors);
 
-    // Load data
+    const tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip-regional") 
+        .style("position", "fixed")
+        .style("background", "white")
+        .style("border", "1px solid #ccc")
+        .style("padding", "8px")
+        .style("border-radius", "4px")
+        .style("pointer-events", "none")
+        .style("opacity", 0)
+        .style("font-size", "12px")
+        .style("z-index", 9999);
+
+    const controlBox = container
+        .append("div")
+        .attr("class", "country-controls")
+        .style("flex", "0 0 260px")
+        .style("font-size", "11px");
+
+    controlBox.append("div")
+        .style("font-weight", "bold")
+        .style("margin-bottom", "6px")
+        .text("Select Countries:");
+
+    // search box
+    const searchInput = controlBox.append("input")
+        .attr("type", "text")
+        .attr("placeholder", "Search...")
+        .style("width", "96%")
+        .style("margin-bottom", "8px")
+        .style("padding", "4px");
+
+    
+    const clearButton = controlBox.append("button")
+    .text("Clear All")
+    .style("margin-bottom", "10px")
+    .style("padding", "6px 10px")
+    .style("width", "100%")
+    .style("cursor", "pointer")
+    .style("background", "#eee")
+    .style("border", "1px solid #ccc")
+    .style("border-radius", "4px")
+    .style("font-size", "12px")
+    .on("click", () => {
+        countryCheckboxes.selectAll("input[type='checkbox']")
+            .property("checked", false);
+        selectedCountries = [];
+        updateLines();
+    });
+
+    const countryCheckboxes = controlBox.append("div")
+        .attr("id", "country-checkboxes")
+        .style("max-height", "60vh")
+        .style("overflow-y", "auto")
+        .style("border", "1px solid #ddd")
+        .style("padding", "10px")
+        .style("background-color", "white")
+        .style("border-radius", "4px");
+
     d3.csv(csvPath, d => ({
         country: d.CountryName,
         year: +d.year,
@@ -1001,8 +1071,9 @@ function drawRegionalComparison(containerId, csvPath) {
             v => v.length,
             d => d.country
         );
+
         const uniqueCountries = Array.from(countryDataCounts.entries())
-            .filter(([country, count]) => count >= 10)
+            .filter(([, count]) => count >= 10)
             .map(([country]) => country)
             .sort();
 
@@ -1010,7 +1081,9 @@ function drawRegionalComparison(containerId, csvPath) {
         if (validDefaultCountries.length === 0 && uniqueCountries.length > 0) {
             selectedCountries = uniqueCountries.slice(0, 6);
         } else {
-            selectedCountries = validDefaultCountries.length > 0 ? validDefaultCountries : uniqueCountries.slice(0, 6);
+            selectedCountries = validDefaultCountries.length > 0
+                ? validDefaultCountries
+                : uniqueCountries.slice(0, 6);
         }
 
         // Scales
@@ -1018,8 +1091,10 @@ function drawRegionalComparison(containerId, csvPath) {
             .domain(d3.extent(historicalData, d => d.year))
             .range([0, width]);
 
+        const yExtent = d3.extent(historicalData, d => d.anomaly);
+        const maxAbs = Math.max(Math.abs(yExtent[0] || 0), Math.abs(yExtent[1] || 0));
         const y = d3.scaleLinear()
-            .domain(d3.extent(historicalData, d => d.anomaly))
+            .domain([-maxAbs, maxAbs])
             .range([height, 0]);
 
         // Line generator
@@ -1027,6 +1102,8 @@ function drawRegionalComparison(containerId, csvPath) {
             .x(d => x(d.year))
             .y(d => y(d.anomaly))
             .curve(d3.curveMonotoneX);
+        
+        const anomalyFormat = d3.format("+.2f");
 
         // Axes
         svg.append("g")
@@ -1062,54 +1139,23 @@ function drawRegionalComparison(containerId, csvPath) {
             .style("font-weight", "600")
             .text("Regional Temperature Trends: Different Places, Different Warming Rates");
 
-        // Tooltip
-        const tooltip = d3.select("body")
-            .append("div")
-            .attr("class", "tooltip")
-            .style("position", "fixed")
-            .style("background", "white")
-            .style("border", "1px solid #ccc")
-            .style("padding", "8px")
-            .style("border-radius", "4px")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .style("font-size", "12px");
-
-        // Country selection controls
-        const controlBox = d3.select(`#${containerId}`)
-            .append("div")
-            .style("position", "absolute")
-            .style("left", (width + margin.left + 20) + "px")
-            .style("top", (margin.top + 40) + "px")
-            .style("width", "180px");
-
-        controlBox.append("div")
-            .style("font-weight", "bold")
-            .style("margin-bottom", "10px")
-            .text("Select Countries:");
-
-        const countryCheckboxes = controlBox.append("div")
-            .attr("id", "country-checkboxes");
-
-        // Update function to draw lines
+        // ---- update lines + legend ----
         function updateLines() {
             const filteredData = historicalData.filter(d => selectedCountries.includes(d.country));
-            
-            // Group by country
             const dataByCountry = d3.group(filteredData, d => d.country);
-            
+
             colorScale.domain(selectedCountries);
 
-            // Remove old lines
             svg.selectAll(".country-line").remove();
             svg.selectAll(".country-points").remove();
+            svg.selectAll(".legend").remove();
 
-            // Draw lines
             dataByCountry.forEach((values, country) => {
                 const sortedValues = Array.from(values).sort((a, b) => a.year - b.year);
                 const color = colorScale(country);
+                const classSafe = country.replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
-                // Line
+                // line
                 svg.append("path")
                     .datum(sortedValues)
                     .attr("class", "country-line")
@@ -1120,58 +1166,55 @@ function drawRegionalComparison(containerId, csvPath) {
                     .style("opacity", 0.8);
 
                 // Points with hover
-                svg.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
+                svg.selectAll(`.point-${classSafe}`)
                     .data(sortedValues)
                     .join("circle")
-                    .attr("class", `country-points point-${country.replace(/\s+/g, '-')}`)
+                    .attr("class", `country-points point-${classSafe}`)
                     .attr("cx", d => x(d.year))
                     .attr("cy", d => y(d.anomaly))
-                    .attr("r", 3)
+                    .attr("r", 5)
                     .attr("fill", color)
                     .style("opacity", 0)
                     .on("mouseover", function(event, d) {
-                        tooltip.html(`
-                            <strong>${country}</strong><br>
-                            Year: ${d.year}<br>
-                            Anomaly: ${d.anomaly.toFixed(2)}°C
-                        `)
-                        .style("left", (event.pageX + 10) + "px")
-                        .style("top", (event.pageY - 10) + "px")
-                        .style("opacity", 1);
-                        
-                        d3.select(this).attr("r", 5).style("opacity", 1);
+                        const [mx, my] = d3.pointer(event, container.node());
+
+                        tooltip
+                            .html(`
+                                <strong>${country}</strong><br>
+                                Year: ${d.year}<br>
+                                Anomaly: ${anomalyFormat(d.anomaly)}°C
+                            `)
+                            .style("left", (mx + 10) + "px")
+                            .style("top", (my - 10) + "px")
+                            .style("opacity", 1);
+
+                        d3.select(this)
+                            .attr("r", 7)
+                            .style("opacity", 1);
+                    })
+                    .on("mousemove", function(event) {
+                        const [mx, my] = d3.pointer(event, container.node());
+                        tooltip
+                            .style("left", (mx + 10) + "px")
+                            .style("top", (my - 10) + "px");
                     })
                     .on("mouseout", function() {
                         tooltip.style("opacity", 0);
-                        d3.select(this).attr("r", 3).style("opacity", 0);
-                    })
-                    .on("mouseenter", function() {
-                        svg.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
-                            .style("opacity", 0.6);
-                    })
-                    .on("mouseleave", function() {
-                        // Hide points again
-                        svg.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
+
+                        d3.select(this)
+                            .attr("r", 5)
                             .style("opacity", 0);
                     });
             });
 
-            // Update legend
-            updateLegend();
-        }
-
-        // Legend
-        function updateLegend() {
-            svg.selectAll(".legend").remove();
-
+            // legend in top-left of chart
             const legend = svg.append("g")
                 .attr("class", "legend")
-                .attr("transform", `translate(${width + 20}, 20)`);
+                .attr("transform", `translate(25, 0)`)
 
             selectedCountries.forEach((country, i) => {
                 const legendItem = legend.append("g")
-                    .attr("class", "legend-item")
-                    .attr("transform", `translate(0, ${i * 20})`);
+                    .attr("transform", `translate(0, ${i * 18})`);
 
                 legendItem.append("line")
                     .attr("x1", 0)
@@ -1189,15 +1232,23 @@ function drawRegionalComparison(containerId, csvPath) {
             });
         }
 
-        const topCountries = uniqueCountries.slice(0, 25);
-        topCountries.forEach(country => {
-            const checkboxContainer = countryCheckboxes.append("div")
-                .style("margin-bottom", "5px");
+        // build checkbox list
+        const topCountries = uniqueCountries.slice(0, 200);
+        const options = countryCheckboxes.selectAll(".country-option")
+            .data(topCountries)
+            .enter()
+            .append("div")
+            .attr("class", "country-option")
+            .style("margin-bottom", "4px");
 
-            checkboxContainer.append("input")
+        options.each(function(country) {
+            const row = d3.select(this);
+            const id = `checkbox-${containerId}-${country.replace(/\s+/g, "-").replace(/[^\w-]/g, "")}`;
+
+            row.append("input")
                 .attr("type", "checkbox")
                 .attr("value", country)
-                .attr("id", `checkbox-${country.replace(/\s+/g, '-')}`)
+                .attr("id", id)
                 .property("checked", selectedCountries.includes(country))
                 .on("change", function() {
                     if (this.checked) {
@@ -1210,19 +1261,28 @@ function drawRegionalComparison(containerId, csvPath) {
                     updateLines();
                 });
 
-            checkboxContainer.append("label")
-                .attr("for", `checkbox-${country.replace(/\s+/g, '-')}`)
+            row.append("label")
+                .attr("for", id)
                 .style("margin-left", "5px")
-                .style("font-size", "11px")
                 .style("cursor", "pointer")
                 .text(country);
         });
 
-        // Initial draw
-        updateLines();
+        // search filter
+        searchInput.on("input", function() {
+            const term = this.value.trim().toLowerCase();
+            countryCheckboxes.selectAll(".country-option")
+                .style("display", d =>
+                    term === "" || d.toLowerCase().includes(term) ? null : "none"
+                );
+        });
 
+        // initial draw
+        updateLines();
     }).catch(err => console.error(err));
 }
+
+
 
 function drawSeaIceConcentration(containerId, csvPath) {
     const margin = { top: 60, right: 100, bottom: 80, left: 90 };
