@@ -599,7 +599,7 @@ function initStripesAndCountryMap() {
 
   let activeCountry = null;
   let countriesGroup;
-  
+
   const noDataColor = "#e0e0e0";
 
   const stripeSvg = d3.select("#stripe-container")
@@ -694,6 +694,29 @@ function initStripesAndCountryMap() {
       stripesData[Math.floor(stripesData.length / 2)].year;
 
     setSelectedYear(defaultYear);
+    const searchInput = document.getElementById("country-search");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        const query = e.target.value.trim().toLowerCase();
+
+        mapSvg.selectAll(".country")
+          .attr("stroke", d =>
+            query && d.properties.name.toLowerCase().includes(query)
+              ? "black"
+              : "#999"
+          )
+          .attr("stroke-width", d =>
+            query && d.properties.name.toLowerCase().includes(query)
+              ? 1.5
+              : 0.6
+          )
+          .attr("opacity", d =>
+            query && !d.properties.name.toLowerCase().includes(query)
+              ? 0.4
+              : 1
+          );
+      });
+    }
   });
   
 
@@ -749,6 +772,14 @@ function initStripesAndCountryMap() {
       })
       .on("click", (event, d) => {
         setSelectedYear(d.year);
+
+        const mapEl = document.getElementById("map-container");
+        if (mapEl) {
+            mapEl.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+            });
+        }
       });
 
 
@@ -899,7 +930,7 @@ function initStripesAndCountryMap() {
     // fill colors map update
     countries
       .transition()
-      .duration(400)
+      .duration(600)
       .attr("fill", d => {
         const a = d.properties.anomaly;
         return a == null || isNaN(a) ? noDataColor : mapColorScale(a);
