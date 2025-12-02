@@ -54,7 +54,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("y", height + 45)
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
-            .text("CO₂ Mass (10,000,000,000,000 kg)");
+            .text("CO₂ Mass (× 10¹⁴ kg)");
 
         svg.append("text")
             .attr("x", -height / 2)
@@ -300,7 +300,9 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
         .style("border", "1px solid #ccc")
         .style("padding", "5px")
         .style("pointer-events", "none")
-        .style("opacity", 0);
+        .style("opacity", 0)
+        .style("font-size", "14px")
+        .style("font-family", "Arial, sans-serif");
 
     // Load CSV data
     Promise.all([
@@ -404,14 +406,14 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("x2", x(nearestYear))
             .style("opacity", 1);
 
-        let text = `Year: ${nearestYear}<br>`;
+        let text = `<strong>Year:</strong> ${nearestYear}<br>`;
         const hist = historical.find(d => d.year === nearestYear);
-        if(hist) text += `Historical: ${hist.value}<br>`;
+        if(hist) text += `<strong>Historical:</strong> ${hist.value}<br>`;
 
         predictions.forEach(row => {
             if(row.year === nearestYear){
                 visibleLines.forEach(key => {
-                    if(row[key] !== undefined) text += `${key}: ${row[key]}<br>`;
+                    if(row[key] !== undefined) text += `<strong>${key}:</strong> ${row[key].toFixed(3)}<br>`;
                 });
             }
         });
@@ -507,6 +509,23 @@ function showText(text) {
     d3.select("#story-text").html(text);
 }
 
+function updateSSPCheckboxColors() {
+    document.querySelectorAll('.ssp-option').forEach(label => {
+        const input = label.querySelector('input');
+        const color = label.getAttribute('data-color');
+
+        if(input.checked){
+            label.style.backgroundColor = color; 
+            label.style.color = 'white';           
+            label.style.border = `2px solid ${color}`;
+        } else {
+            label.style.backgroundColor = 'white'; 
+            label.style.color = 'black'; 
+            label.style.border = `2px solid ${color}`; 
+        }
+    });
+}
+
 //Scrollama
 function setupScrollama() {
     const scroller = scrollama();
@@ -551,13 +570,15 @@ function setupScrollama() {
                 drawSelectedPredictionLines(["ssp126","ssp245","ssp370","ssp585"]);
                 visibleLines = ["ssp126","ssp245","ssp370","ssp585"];
                 updateLegendHighlight();
-                showText("All lines visible: select which SSP lines to display using checkboxes.");
 
                 d3.selectAll('#ssp-options input[type="checkbox"]').on('change', function() {
                     const selectedScenarios = Array.from(document.querySelectorAll('#ssp-options input:checked'))
                         .map(input => input.value);
                     drawSelectedPredictionLines(selectedScenarios);
+                    updateSSPCheckboxColors(); // <-- sync colors when toggled
+                    updateLegendHighlight();    // <-- keep legend in sync
                 });
+                updateSSPCheckboxColors();
                 break;
         }
     });

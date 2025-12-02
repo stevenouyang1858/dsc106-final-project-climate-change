@@ -18,29 +18,19 @@ h1 {
     color: #333;
 }
 
-svg#map {
-  width: 960px;
-  height: 500px;
-  border: 1px solid #ccc;
-  background-color: #6eb3d5; /* light ocean color */
-}
 
-/* Country styling */
-.country {
-  fill: #ccc;
-  stroke: #333;
-  stroke-width: 0.5px;
-  transition: fill 0.3s;
-}
 
-.country:hover {
-  fill: orange;
-}
-
+/* Line plot and the scrollytelling */
 #story section {
     min-height: 80vh;
     padding: 2em;
-    border-bottom: 1px solid #ccc;
+    display: flex;         
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;  
+    text-align: center;     
+    padding: 2em;           
+    border-bottom: none;
 }
 
 /* Container for scroll-driven line chart */
@@ -62,18 +52,21 @@ svg#map {
 
 /* Sticky chart column */
 #linechart-container {
-    flex: 2;                  /* larger than text */
+    flex: 2;                  
     position: sticky;          /* stay in view */
-    top: 20px;                 /* distance from top while scrolling */
-    height: 500px;             /* match chart height */
+    top: 120px;
+    height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Optional: smaller spacing for sections */
-#story section {
-    min-height: 80vh;
-    padding: 1em 0;
-    border-bottom: 1px solid #ccc;
+#linechart-container svg {
+    max-height: 100%;
+    max-width: 100%;
+    display: block;
 }
+
 
 .divider-line {
     stroke: black;
@@ -82,7 +75,7 @@ svg#map {
 }
 
 .tooltip {
-    position: fixed;      /* THIS IS THE KEY */
+    position: fixed;
     background: white;
     padding: 6px 10px;
     border: 1px solid #888;
@@ -102,6 +95,42 @@ svg#map {
 .legend-active {
     opacity: 1 !important;
     font-weight: bold;
+}
+
+/* Grid layout */
+.ssp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+}
+
+/* Base style */
+.ssp-option {
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    color: black;
+}
+
+/* Checked state */
+.ssp-option input:checked + span,
+.ssp-option.checked {
+    color: white;
+}
+
+/* Checkbox style */
+.ssp-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: inherit;
+    display: none;
 }
 
 /* Visualization section styling */
