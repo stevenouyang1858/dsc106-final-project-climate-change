@@ -611,3 +611,487 @@ drawCO2LineChart(
     "./data/co2mass_historical_1950_2014_yearly.csv",
     "./data/co2mass_ssp_predictions_yearly.csv"
 );
+
+drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
+
+drawDecadeWarming("decade-warming", "./data/country_temp_anomaly_1950_2050.csv");
+
+function drawRegionalComparison(containerId, csvPath) {
+    const margin = { top: 40, right: 200, bottom: 60, left: 80 };
+    const width = 1000 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
+
+    d3.select(`#${containerId}`).selectAll("svg").remove();
+
+    const svg = d3.select(`#${containerId}`)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+   
+    const defaultCountries = ["United States", "China", "India", "Brazil", "Russia", "Australia", "Canada", "Germany"];
+    let selectedCountries = [...defaultCountries];
+    let allData = null;
+
+    // Color scale for countries
+    const countryColors = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+        "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5"
+    ];
+
+    const colorScale = d3.scaleOrdinal()
+        .domain([])
+        .range(countryColors);
+
+    // Load data
+    d3.csv(csvPath, d => ({
+        country: d.CountryName,
+        year: +d.year,
+        anomaly: +d.anomaly
+    })).then(data => {
+        allData = data;
+
+        const historicalData = data.filter(d => d.year <= 2014);
+
+        const countryDataCounts = d3.rollup(
+            historicalData,
+            v => v.length,
+            d => d.country
+        );
+        const uniqueCountries = Array.from(countryDataCounts.entries())
+            .filter(([country, count]) => count >= 10)
+            .map(([country]) => country)
+            .sort();
+
+        const validDefaultCountries = defaultCountries.filter(c => uniqueCountries.includes(c));
+        if (validDefaultCountries.length === 0 && uniqueCountries.length > 0) {
+            selectedCountries = uniqueCountries.slice(0, 6);
+        } else {
+            selectedCountries = validDefaultCountries.length > 0 ? validDefaultCountries : uniqueCountries.slice(0, 6);
+        }
+
+        // Scales
+        const x = d3.scaleLinear()
+            .domain(d3.extent(historicalData, d => d.year))
+            .range([0, width]);
+
+        const y = d3.scaleLinear()
+            .domain(d3.extent(historicalData, d => d.anomaly))
+            .range([height, 0]);
+
+        // Line generator
+        const line = d3.line()
+            .x(d => x(d.year))
+            .y(d => y(d.anomaly))
+            .curve(d3.curveMonotoneX);
+
+        // Axes
+        svg.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        // Axis labels
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height + 45)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("Year");
+
+        svg.append("text")
+            .attr("x", -height / 2)
+            .attr("y", -50)
+            .attr("transform", "rotate(-90)")
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("Temperature Anomaly (°C)");
+
+        // Chart title
+        svg.append("text")
+            .attr("class", "chart-title")
+            .attr("x", width / 2)
+            .attr("y", -margin.top / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "600")
+            .text("Regional Temperature Trends: Different Places, Different Warming Rates");
+
+        // Tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("position", "fixed")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("padding", "8px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .style("font-size", "12px");
+
+        // Country selection controls
+        const controlBox = d3.select(`#${containerId}`)
+            .append("div")
+            .style("position", "absolute")
+            .style("left", (width + margin.left + 20) + "px")
+            .style("top", (margin.top + 40) + "px")
+            .style("width", "180px");
+
+        controlBox.append("div")
+            .style("font-weight", "bold")
+            .style("margin-bottom", "10px")
+            .text("Select Countries:");
+
+        const countryCheckboxes = controlBox.append("div")
+            .attr("id", "country-checkboxes");
+
+        // Update function to draw lines
+        function updateLines() {
+            const filteredData = historicalData.filter(d => selectedCountries.includes(d.country));
+            
+            // Group by country
+            const dataByCountry = d3.group(filteredData, d => d.country);
+            
+            colorScale.domain(selectedCountries);
+
+            // Remove old lines
+            svg.selectAll(".country-line").remove();
+            svg.selectAll(".country-points").remove();
+
+            // Draw lines
+            dataByCountry.forEach((values, country) => {
+                const sortedValues = Array.from(values).sort((a, b) => a.year - b.year);
+                const color = colorScale(country);
+
+                // Line
+                svg.append("path")
+                    .datum(sortedValues)
+                    .attr("class", "country-line")
+                    .attr("fill", "none")
+                    .attr("stroke", color)
+                    .attr("stroke-width", 2.5)
+                    .attr("d", line)
+                    .style("opacity", 0.8);
+
+                // Points with hover
+                svg.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
+                    .data(sortedValues)
+                    .join("circle")
+                    .attr("class", `country-points point-${country.replace(/\s+/g, '-')}`)
+                    .attr("cx", d => x(d.year))
+                    .attr("cy", d => y(d.anomaly))
+                    .attr("r", 3)
+                    .attr("fill", color)
+                    .style("opacity", 0)
+                    .on("mouseover", function(event, d) {
+                        tooltip.html(`
+                            <strong>${country}</strong><br>
+                            Year: ${d.year}<br>
+                            Anomaly: ${d.anomaly.toFixed(2)}°C
+                        `)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 10) + "px")
+                        .style("opacity", 1);
+                        
+                        d3.select(this).attr("r", 5).style("opacity", 1);
+                    })
+                    .on("mouseout", function() {
+                        tooltip.style("opacity", 0);
+                        d3.select(this).attr("r", 3).style("opacity", 0);
+                    })
+                    .on("mouseenter", function() {
+                        svg.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
+                            .style("opacity", 0.6);
+                    })
+                    .on("mouseleave", function() {
+                        // Hide points again
+                        svg.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
+                            .style("opacity", 0);
+                    });
+            });
+
+            // Update legend
+            updateLegend();
+        }
+
+        // Legend
+        function updateLegend() {
+            svg.selectAll(".legend").remove();
+
+            const legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", `translate(${width + 20}, 20)`);
+
+            selectedCountries.forEach((country, i) => {
+                const legendItem = legend.append("g")
+                    .attr("class", "legend-item")
+                    .attr("transform", `translate(0, ${i * 20})`);
+
+                legendItem.append("line")
+                    .attr("x1", 0)
+                    .attr("x2", 15)
+                    .attr("y1", 0)
+                    .attr("y2", 0)
+                    .attr("stroke", colorScale(country))
+                    .attr("stroke-width", 2.5);
+
+                legendItem.append("text")
+                    .attr("x", 20)
+                    .attr("y", 4)
+                    .attr("font-size", "11px")
+                    .text(country);
+            });
+        }
+
+        const topCountries = uniqueCountries.slice(0, 25);
+        topCountries.forEach(country => {
+            const checkboxContainer = countryCheckboxes.append("div")
+                .style("margin-bottom", "5px");
+
+            checkboxContainer.append("input")
+                .attr("type", "checkbox")
+                .attr("value", country)
+                .attr("id", `checkbox-${country.replace(/\s+/g, '-')}`)
+                .property("checked", selectedCountries.includes(country))
+                .on("change", function() {
+                    if (this.checked) {
+                        if (!selectedCountries.includes(country)) {
+                            selectedCountries.push(country);
+                        }
+                    } else {
+                        selectedCountries = selectedCountries.filter(c => c !== country);
+                    }
+                    updateLines();
+                });
+
+            checkboxContainer.append("label")
+                .attr("for", `checkbox-${country.replace(/\s+/g, '-')}`)
+                .style("margin-left", "5px")
+                .style("font-size", "11px")
+                .style("cursor", "pointer")
+                .text(country);
+        });
+
+        // Initial draw
+        updateLines();
+
+    }).catch(err => console.error(err));
+}
+
+function drawDecadeWarming(containerId, csvPath) {
+    const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+    const width = 900 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
+
+    d3.select(`#${containerId}`).selectAll("svg").remove();
+
+    const svg = d3.select(`#${containerId}`)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Load data
+    d3.csv(csvPath, d => ({
+        country: d.CountryName,
+        year: +d.year,
+        anomaly: +d.anomaly
+    })).then(data => {
+        const historicalData = data.filter(d => d.year <= 2014);
+
+        // Group by decade
+        const decades = [];
+        for (let year = 1950; year < 2015; year += 10) {
+            const decadeData = historicalData.filter(d => d.year >= year && d.year < year + 10);
+            if (decadeData.length > 0) {
+                const avgAnomaly = d3.mean(decadeData, d => d.anomaly);
+                const maxAnomaly = d3.max(decadeData, d => d.anomaly);
+                const minAnomaly = d3.min(decadeData, d => d.anomaly);
+                const medianAnomaly = d3.quantile(decadeData.map(d => d.anomaly).sort(d3.ascending), 0.5);
+                
+                decades.push({
+                    decade: `${year}s`,
+                    startYear: year,
+                    avgAnomaly: avgAnomaly,
+                    maxAnomaly: maxAnomaly,
+                    minAnomaly: minAnomaly,
+                    medianAnomaly: medianAnomaly,
+                    count: decadeData.length
+                });
+            }
+        }
+
+        // Scales
+        const x = d3.scaleBand()
+            .domain(decades.map(d => d.decade))
+            .range([0, width])
+            .paddingInner(0.3);
+
+        const y = d3.scaleLinear()
+            .domain([d3.min(decades, d => d.minAnomaly) * 1.1, d3.max(decades, d => d.maxAnomaly) * 1.1])
+            .range([height, 0]);
+
+    
+        const colorScale = d3.scaleSequential()
+            .domain([d3.max(decades, d => d.avgAnomaly), d3.min(decades, d => d.avgAnomaly)])
+            .interpolator(d3.interpolateRdYlBu);
+
+        // Axes
+        svg.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x));
+
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        // Axis labels
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height + 45)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("Decade");
+
+        svg.append("text")
+            .attr("x", -height / 2)
+            .attr("y", -50)
+            .attr("transform", "rotate(-90)")
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("Temperature Anomaly (°C)");
+
+        // Chart title
+        svg.append("text")
+            .attr("class", "chart-title")
+            .attr("x", width / 2)
+            .attr("y", -margin.top / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "600")
+            .text("Accelerating Warming: Temperature Anomalies by Decade");
+
+        // Tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("position", "fixed")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("padding", "8px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .style("font-size", "12px");
+
+        // Draw bars with error bars (min-max range)
+        const bars = svg.selectAll(".decade-bar")
+            .data(decades)
+            .join("g")
+            .attr("class", "decade-bar");
+
+        // Error bars (min-max range)
+        bars.append("line")
+            .attr("x1", d => x(d.decade) + x.bandwidth() / 2)
+            .attr("x2", d => x(d.decade) + x.bandwidth() / 2)
+            .attr("y1", d => y(d.minAnomaly))
+            .attr("y2", d => y(d.maxAnomaly))
+            .attr("stroke", "#333")
+            .attr("stroke-width", 2);
+
+        // Min marker
+        bars.append("line")
+            .attr("x1", d => x(d.decade) + x.bandwidth() / 2 - 5)
+            .attr("x2", d => x(d.decade) + x.bandwidth() / 2 + 5)
+            .attr("y1", d => y(d.minAnomaly))
+            .attr("y2", d => y(d.minAnomaly))
+            .attr("stroke", "#333")
+            .attr("stroke-width", 2);
+
+        // Max marker
+        bars.append("line")
+            .attr("x1", d => x(d.decade) + x.bandwidth() / 2 - 5)
+            .attr("x2", d => x(d.decade) + x.bandwidth() / 2 + 5)
+            .attr("y1", d => y(d.maxAnomaly))
+            .attr("y2", d => y(d.maxAnomaly))
+            .attr("stroke", "#333")
+            .attr("stroke-width", 2);
+
+        // Average bar
+        bars.append("rect")
+            .attr("x", d => x(d.decade))
+            .attr("y", d => d.avgAnomaly >= 0 ? y(d.avgAnomaly) : y(0))
+            .attr("width", x.bandwidth())
+            .attr("height", d => Math.abs(y(d.avgAnomaly) - y(0)))
+            .attr("fill", d => colorScale(d.avgAnomaly))
+            .attr("stroke", "#333")
+            .attr("stroke-width", 1)
+            .style("opacity", 0.8)
+            .on("mouseover", function(event, d) {
+                tooltip.html(`
+                    <strong>${d.decade}</strong><br>
+                    Average: ${d.avgAnomaly.toFixed(2)}°C<br>
+                    Min: ${d.minAnomaly.toFixed(2)}°C<br>
+                    Max: ${d.maxAnomaly.toFixed(2)}°C<br>
+                    Median: ${d.medianAnomaly.toFixed(2)}°C<br>
+                    Data points: ${d.count}
+                `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px")
+                .style("opacity", 1);
+                
+                d3.select(this).style("opacity", 1);
+            })
+            .on("mouseout", function() {
+                tooltip.style("opacity", 0);
+                d3.select(this).style("opacity", 0.8);
+            });
+
+        // Zero line
+        svg.append("line")
+            .attr("x1", 0)
+            .attr("x2", width)
+            .attr("y1", y(0))
+            .attr("y2", y(0))
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "4 2");
+
+        // Trend line showing acceleration
+        const trendLine = d3.line()
+            .x(d => x(d.decade) + x.bandwidth() / 2)
+            .y(d => y(d.avgAnomaly))
+            .curve(d3.curveMonotoneX);
+
+        svg.append("path")
+            .datum(decades)
+            .attr("fill", "none")
+            .attr("stroke", "blue")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "5 5")
+            .attr("d", trendLine)
+            .style("opacity", 0.6);
+
+        // Added annotation for trend
+        if (decades.length >= 2) {
+            const firstDecade = decades[0];
+            const lastDecade = decades[decades.length - 1];
+            const change = lastDecade.avgAnomaly - firstDecade.avgAnomaly;
+            
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 70)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "12px")
+                .attr("fill", "#666")
+                .text(`Average anomaly increased by ${change.toFixed(2)}°C from ${firstDecade.decade} to ${lastDecade.decade}`);
+        }
+
+    }).catch(err => console.error(err));
+}

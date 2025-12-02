@@ -103,3 +103,71 @@ svg#map {
     opacity: 1 !important;
     font-weight: bold;
 }
+
+/* Visualization section styling */
+.viz-section {
+    margin: 60px 20px;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.viz-section h2 {
+    font-size: 1.8em;
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.viz-section p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 30px;
+    text-align: justify;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#regional-comparison, #decade-warming {
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#scatterplot {
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Checkbox styling */
+#country-checkboxes {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: white;
+    border-radius: 4px;
+}
+
+#country-checkboxes div {
+    display: flex;
+    align-items: center;
+}
+
+#country-checkboxes input[type="checkbox"] {
+    cursor: pointer;
+}
+
+#country-checkboxes label {
+    user-select: none;
+}
