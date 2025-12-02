@@ -614,7 +614,7 @@ drawCO2LineChart(
 
 drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
 
-drawDecadeWarming("decade-warming", "./data/country_temp_anomaly_1950_2050.csv");
+drawSeaIceConcentration("decade-warming", "./data/siconc_annual_mean_polar.csv");
 
 function drawRegionalComparison(containerId, csvPath) {
     const margin = { top: 40, right: 200, bottom: 60, left: 80 };
@@ -884,7 +884,7 @@ function drawRegionalComparison(containerId, csvPath) {
     }).catch(err => console.error(err));
 }
 
-function drawDecadeWarming(containerId, csvPath) {
+function drawSeaIceConcentration(containerId, csvPath) {
     const margin = { top: 40, right: 40, bottom: 60, left: 80 };
     const width = 900 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
@@ -900,53 +900,35 @@ function drawDecadeWarming(containerId, csvPath) {
 
     // Load data
     d3.csv(csvPath, d => ({
-        country: d.CountryName,
         year: +d.year,
-        anomaly: +d.anomaly
+        siconc: +d.siconc,
+        scenario: d.scenario
     })).then(data => {
-        const historicalData = data.filter(d => d.year <= 2014);
+        const historicalData = data.filter(d => d.scenario === "historical");
+        const projectedData = data.filter(d => d.scenario === "ssp245");
 
-        // Group by decade
-        const decades = [];
-        for (let year = 1950; year < 2015; year += 10) {
-            const decadeData = historicalData.filter(d => d.year >= year && d.year < year + 10);
-            if (decadeData.length > 0) {
-                const avgAnomaly = d3.mean(decadeData, d => d.anomaly);
-                const maxAnomaly = d3.max(decadeData, d => d.anomaly);
-                const minAnomaly = d3.min(decadeData, d => d.anomaly);
-                const medianAnomaly = d3.quantile(decadeData.map(d => d.anomaly).sort(d3.ascending), 0.5);
-                
-                decades.push({
-                    decade: `${year}s`,
-                    startYear: year,
-                    avgAnomaly: avgAnomaly,
-                    maxAnomaly: maxAnomaly,
-                    minAnomaly: minAnomaly,
-                    medianAnomaly: medianAnomaly,
-                    count: decadeData.length
-                });
-            }
-        }
+        // Combine all years for domain
+        const allYears = data.map(d => d.year);
 
         // Scales
-        const x = d3.scaleBand()
-            .domain(decades.map(d => d.decade))
-            .range([0, width])
-            .paddingInner(0.3);
+        const x = d3.scaleLinear()
+            .domain(d3.extent(allYears))
+            .range([0, width]);
 
         const y = d3.scaleLinear()
-            .domain([d3.min(decades, d => d.minAnomaly) * 1.1, d3.max(decades, d => d.maxAnomaly) * 1.1])
+            .domain([d3.min(data, d => d.siconc) * 0.9, d3.max(data, d => d.siconc) * 1.05])
             .range([height, 0]);
 
-    
-        const colorScale = d3.scaleSequential()
-            .domain([d3.max(decades, d => d.avgAnomaly), d3.min(decades, d => d.avgAnomaly)])
-            .interpolator(d3.interpolateRdYlBu);
+        // Line generator
+        const line = d3.line()
+            .x(d => x(d.year))
+            .y(d => y(d.siconc))
+            .curve(d3.curveMonotoneX);
 
         // Axes
         svg.append("g")
             .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x));
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
         svg.append("g")
             .call(d3.axisLeft(y));
@@ -957,7 +939,7 @@ function drawDecadeWarming(containerId, csvPath) {
             .attr("y", height + 45)
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
-            .text("Decade");
+            .text("Year");
 
         svg.append("text")
             .attr("x", -height / 2)
@@ -965,7 +947,7 @@ function drawDecadeWarming(containerId, csvPath) {
             .attr("transform", "rotate(-90)")
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
-            .text("Temperature Anomaly (°C)");
+            .text("Sea Ice Concentration (%)");
 
         // Chart title
         svg.append("text")
@@ -975,7 +957,7 @@ function drawDecadeWarming(containerId, csvPath) {
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
             .style("font-weight", "600")
-            .text("Accelerating Warming: Temperature Anomalies by Decade");
+            .text("Melting Polar Ice: Sea Ice Concentration Over Time");
 
         // Tooltip
         const tooltip = d3.select("body")
@@ -990,108 +972,139 @@ function drawDecadeWarming(containerId, csvPath) {
             .style("opacity", 0)
             .style("font-size", "12px");
 
-        // Draw bars with error bars (min-max range)
-        const bars = svg.selectAll(".decade-bar")
-            .data(decades)
-            .join("g")
-            .attr("class", "decade-bar");
+        // Draw historical line
+        svg.append("path")
+            .datum(historicalData)
+            .attr("class", "ice-line historical")
+            .attr("fill", "none")
+            .attr("stroke", "#2563eb")
+            .attr("stroke-width", 3)
+            .attr("d", line);
 
-        // Error bars (min-max range)
-        bars.append("line")
-            .attr("x1", d => x(d.decade) + x.bandwidth() / 2)
-            .attr("x2", d => x(d.decade) + x.bandwidth() / 2)
-            .attr("y1", d => y(d.minAnomaly))
-            .attr("y2", d => y(d.maxAnomaly))
-            .attr("stroke", "#333")
-            .attr("stroke-width", 2);
+        // Draw projected line (dashed)
+        svg.append("path")
+            .datum(projectedData)
+            .attr("class", "ice-line projected")
+            .attr("fill", "none")
+            .attr("stroke", "#dc2626")
+            .attr("stroke-width", 3)
+            .attr("stroke-dasharray", "8 4")
+            .attr("d", line);
 
-        // Min marker
-        bars.append("line")
-            .attr("x1", d => x(d.decade) + x.bandwidth() / 2 - 5)
-            .attr("x2", d => x(d.decade) + x.bandwidth() / 2 + 5)
-            .attr("y1", d => y(d.minAnomaly))
-            .attr("y2", d => y(d.minAnomaly))
-            .attr("stroke", "#333")
-            .attr("stroke-width", 2);
-
-        // Max marker
-        bars.append("line")
-            .attr("x1", d => x(d.decade) + x.bandwidth() / 2 - 5)
-            .attr("x2", d => x(d.decade) + x.bandwidth() / 2 + 5)
-            .attr("y1", d => y(d.maxAnomaly))
-            .attr("y2", d => y(d.maxAnomaly))
-            .attr("stroke", "#333")
-            .attr("stroke-width", 2);
-
-        // Average bar
-        bars.append("rect")
-            .attr("x", d => x(d.decade))
-            .attr("y", d => d.avgAnomaly >= 0 ? y(d.avgAnomaly) : y(0))
-            .attr("width", x.bandwidth())
-            .attr("height", d => Math.abs(y(d.avgAnomaly) - y(0)))
-            .attr("fill", d => colorScale(d.avgAnomaly))
-            .attr("stroke", "#333")
+        // Draw points for interaction
+        const allData = [...historicalData, ...projectedData];
+        svg.selectAll(".ice-point")
+            .data(allData)
+            .join("circle")
+            .attr("class", "ice-point")
+            .attr("cx", d => x(d.year))
+            .attr("cy", d => y(d.siconc))
+            .attr("r", 4)
+            .attr("fill", d => d.scenario === "historical" ? "#2563eb" : "#dc2626")
+            .attr("stroke", "white")
             .attr("stroke-width", 1)
-            .style("opacity", 0.8)
+            .style("opacity", 0)
             .on("mouseover", function(event, d) {
+                const scenario = d.scenario === "historical" ? "Historical" : "Projected (SSP2-4.5)";
                 tooltip.html(`
-                    <strong>${d.decade}</strong><br>
-                    Average: ${d.avgAnomaly.toFixed(2)}°C<br>
-                    Min: ${d.minAnomaly.toFixed(2)}°C<br>
-                    Max: ${d.maxAnomaly.toFixed(2)}°C<br>
-                    Median: ${d.medianAnomaly.toFixed(2)}°C<br>
-                    Data points: ${d.count}
+                    <strong>${d.year}</strong><br>
+                    Sea Ice Concentration: ${d.siconc.toFixed(2)}%<br>
+                    <span style="color:#666">${scenario}</span>
                 `)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 10) + "px")
                 .style("opacity", 1);
                 
-                d3.select(this).style("opacity", 1);
+                d3.select(this).style("opacity", 1).attr("r", 6);
             })
             .on("mouseout", function() {
                 tooltip.style("opacity", 0);
-                d3.select(this).style("opacity", 0.8);
+                d3.select(this).style("opacity", 0).attr("r", 4);
             });
 
-        // Zero line
+        // Divider line at 2014/2015
         svg.append("line")
-            .attr("x1", 0)
-            .attr("x2", width)
-            .attr("y1", y(0))
-            .attr("y2", y(0))
+            .attr("class", "divider-line")
+            .attr("x1", x(2014.5))
+            .attr("x2", x(2014.5))
+            .attr("y1", 0)
+            .attr("y2", height)
             .attr("stroke", "#666")
-            .attr("stroke-width", 1)
+            .attr("stroke-width", 2)
             .attr("stroke-dasharray", "4 2");
 
-        // Trend line showing acceleration
-        const trendLine = d3.line()
-            .x(d => x(d.decade) + x.bandwidth() / 2)
-            .y(d => y(d.avgAnomaly))
-            .curve(d3.curveMonotoneX);
+        // Legend
+        const legend = svg.append("g")
+            .attr("class", "legend")
+            .attr("transform", `translate(${width - 200}, 30)`);
 
-        svg.append("path")
-            .datum(decades)
-            .attr("fill", "none")
-            .attr("stroke", "blue")
-            .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "5 5")
-            .attr("d", trendLine)
-            .style("opacity", 0.6);
+        const legendData = [
+            { label: "Historical", color: "#2563eb", dash: "" },
+            { label: "Projected (SSP2-4.5)", color: "#dc2626", dash: "8,4" }
+        ];
 
-        // Added annotation for trend
-        if (decades.length >= 2) {
-            const firstDecade = decades[0];
-            const lastDecade = decades[decades.length - 1];
-            const change = lastDecade.avgAnomaly - firstDecade.avgAnomaly;
-            
+        legend.selectAll("line")
+            .data(legendData)
+            .join("line")
+            .attr("x1", 0)
+            .attr("x2", 20)
+            .attr("y1", (d, i) => i * 25)
+            .attr("y2", (d, i) => i * 25)
+            .attr("stroke", d => d.color)
+            .attr("stroke-width", 3)
+            .attr("stroke-dasharray", d => d.dash);
+
+        legend.selectAll("text")
+            .data(legendData)
+            .join("text")
+            .attr("x", 25)
+            .attr("y", (d, i) => i * 25 + 5)
+            .attr("font-size", "12px")
+            .text(d => d.label);
+
+        // Annotation showing decline
+        if (historicalData.length > 0 && projectedData.length > 0) {
+            const firstValue = historicalData[0].siconc;
+            const lastValue = projectedData[projectedData.length - 1].siconc;
+            const decline = firstValue - lastValue;
+            const percentDecline = (decline / firstValue * 100).toFixed(1);
+
             svg.append("text")
                 .attr("x", width / 2)
                 .attr("y", height + 70)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
                 .attr("fill", "#666")
-                .text(`Average anomaly increased by ${change.toFixed(2)}°C from ${firstDecade.decade} to ${lastDecade.decade}`);
+                .text(`Sea ice concentration declined by ${decline.toFixed(1)}% (${percentDecline}% decrease) from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year}`);
         }
+
+        // Hover overlay for better interaction
+        svg.append("rect")
+            .attr("class", "overlay")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("fill", "none")
+            .attr("pointer-events", "all")
+            .on("mousemove", function(event) {
+                const [mx] = d3.pointer(event);
+                const yearScale = x.invert(mx);
+                const nearestPoint = allData.reduce((a, b) =>
+                    Math.abs(b.year - yearScale) < Math.abs(a.year - yearScale) ? b : a
+                );
+                
+                const scenario = nearestPoint.scenario === "historical" ? "Historical" : "Projected (SSP2-4.5)";
+                tooltip.html(`
+                    <strong>${nearestPoint.year}</strong><br>
+                    Sea Ice Concentration: ${nearestPoint.siconc.toFixed(2)}%<br>
+                    <span style="color:#666">${scenario}</span>
+                `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px")
+                .style("opacity", 1);
+            })
+            .on("mouseout", () => {
+                tooltip.style("opacity", 0);
+            });
 
     }).catch(err => console.error(err));
 }
