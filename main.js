@@ -1413,16 +1413,16 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 .style("opacity", 1);
         }
 
-        // Animation controls - clear any existing ones first
+        // Animation controls
         container.selectAll(".ice-controls").remove();
         const controlsDiv = container.append("div")
             .attr("class", "ice-controls")
             .style("text-align", "center")
-            .style("margin-top", "20px")
+            .style("margin-top", "25px")
             .style("margin-bottom", "10px")
             .style("width", "100%")
-            .style("z-index", "10")
-            .style("position", "relative");
+            .style("position", "relative")
+            .style("z-index", "10");
 
         const playPauseBtn = controlsDiv.append("button")
             .text("▶ Play Animation")
