@@ -206,15 +206,6 @@ function drawCO2TempScatter(containerId, csvPath) {
 
 
 
-
-
-
-
-
-
-
-
-
 // LINE PLOT
 
 let visibleLines = [];
@@ -978,7 +969,6 @@ drawCO2LineChart(
 
 drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
 
-drawSeaIceConcentration("decade-warming", "./data/siconc_annual_mean_polar.csv");
 function drawRegionalComparison(containerId, csvPath) {
     const margin = { top: 40, right: 200, bottom: 60, left: 80 };
     const width = 1000 - margin.left - margin.right;
@@ -1248,18 +1238,25 @@ function drawRegionalComparison(containerId, csvPath) {
 }
 
 function drawSeaIceConcentration(containerId, csvPath) {
-    const margin = { top: 40, right: 40, bottom: 60, left: 80 };
-    const width = 900 - margin.left - margin.right;
-    const height = 500 - margin.top - margin.bottom;
+    const margin = { top: 60, right: 100, bottom: 80, left: 90 };
+    const width = 1000 - margin.left - margin.right;
+    const height = 550 - margin.top - margin.bottom;
 
-    d3.select(`#${containerId}`).selectAll("svg").remove();
+    const container = d3.select(`#${containerId}`);
+    // Clear everything in the container
+    container.selectAll("*").remove();
 
-    const svg = d3.select(`#${containerId}`)
+    const svg = container
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Animation state
+    let isPlaying = false;
+    let animationInterval = null;
+    let currentYearIndex = 0;
 
     // Load data
     d3.csv(csvPath, d => ({
@@ -1269,18 +1266,43 @@ function drawSeaIceConcentration(containerId, csvPath) {
     })).then(data => {
         const historicalData = data.filter(d => d.scenario === "historical");
         const projectedData = data.filter(d => d.scenario === "ssp245");
-
-        // Combine all years for domain
-        const allYears = data.map(d => d.year);
+        const allData = [...historicalData, ...projectedData].sort((a, b) => a.year - b.year);
 
         // Scales
         const x = d3.scaleLinear()
-            .domain(d3.extent(allYears))
+            .domain(d3.extent(allData, d => d.year))
             .range([0, width]);
 
         const y = d3.scaleLinear()
-            .domain([d3.min(data, d => d.siconc) * 0.9, d3.max(data, d => d.siconc) * 1.05])
+            .domain([d3.min(allData, d => d.siconc) * 0.85, d3.max(allData, d => d.siconc) * 1.08])
             .range([height, 0]);
+
+        const iceGradient = svg.append("defs")
+            .append("linearGradient")
+            .attr("id", "iceGradient")
+            .attr("x1", "0%").attr("y1", "0%")
+            .attr("x2", "0%").attr("y2", "100%");
+
+        iceGradient.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "#E0F2FE")
+            .attr("stop-opacity", 0.8);
+
+        iceGradient.append("stop")
+            .attr("offset", "50%")
+            .attr("stop-color", "#BAE6FD")
+            .attr("stop-opacity", 0.6);
+
+        iceGradient.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", "#7DD3FC")
+            .attr("stop-opacity", 0.4);
+
+        const area = d3.area()
+            .x(d => x(d.year))
+            .y0(height)
+            .y1(d => y(d.siconc))
+            .curve(d3.curveMonotoneX);
 
         // Line generator
         const line = d3.line()
@@ -1289,27 +1311,29 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .curve(d3.curveMonotoneX);
 
         // Axes
-        svg.append("g")
+        const xAxis = svg.append("g")
             .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(12));
 
-        svg.append("g")
-            .call(d3.axisLeft(y));
+        const yAxis = svg.append("g")
+            .call(d3.axisLeft(y).ticks(8));
 
         // Axis labels
         svg.append("text")
             .attr("x", width / 2)
-            .attr("y", height + 45)
+            .attr("y", height + 50)
             .attr("text-anchor", "middle")
-            .attr("font-size", "14px")
+            .attr("font-size", "15px")
+            .attr("font-weight", "500")
             .text("Year");
 
         svg.append("text")
             .attr("x", -height / 2)
-            .attr("y", -50)
+            .attr("y", -60)
             .attr("transform", "rotate(-90)")
             .attr("text-anchor", "middle")
-            .attr("font-size", "14px")
+            .attr("font-size", "15px")
+            .attr("font-weight", "500")
             .text("Sea Ice Concentration (%)");
 
         // Chart title
@@ -1318,75 +1342,12 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("x", width / 2)
             .attr("y", -margin.top / 2)
             .attr("text-anchor", "middle")
-            .style("font-size", "20px")
+            .style("font-size", "22px")
             .style("font-weight", "600")
-            .text("Melting Polar Ice: Sea Ice Concentration Over Time");
-
-        // Tooltip
-        const tooltip = d3.select("body")
-            .append("div")
-            .attr("class", "tooltip")
-            .style("position", "fixed")
-            .style("background", "white")
-            .style("border", "1px solid #ccc")
-            .style("padding", "8px")
-            .style("border-radius", "4px")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .style("font-size", "12px");
-
-        // Draw historical line
-        svg.append("path")
-            .datum(historicalData)
-            .attr("class", "ice-line historical")
-            .attr("fill", "none")
-            .attr("stroke", "#2563eb")
-            .attr("stroke-width", 3)
-            .attr("d", line);
-
-        // Draw projected line (dashed)
-        svg.append("path")
-            .datum(projectedData)
-            .attr("class", "ice-line projected")
-            .attr("fill", "none")
-            .attr("stroke", "#dc2626")
-            .attr("stroke-width", 3)
-            .attr("stroke-dasharray", "8 4")
-            .attr("d", line);
-
-        // Draw points for interaction
-        const allData = [...historicalData, ...projectedData];
-        svg.selectAll(".ice-point")
-            .data(allData)
-            .join("circle")
-            .attr("class", "ice-point")
-            .attr("cx", d => x(d.year))
-            .attr("cy", d => y(d.siconc))
-            .attr("r", 4)
-            .attr("fill", d => d.scenario === "historical" ? "#2563eb" : "#dc2626")
-            .attr("stroke", "white")
-            .attr("stroke-width", 1)
-            .style("opacity", 0)
-            .on("mouseover", function(event, d) {
-                const scenario = d.scenario === "historical" ? "Historical" : "Projected (SSP2-4.5)";
-                tooltip.html(`
-                    <strong>${d.year}</strong><br>
-                    Sea Ice Concentration: ${d.siconc.toFixed(2)}%<br>
-                    <span style="color:#666">${scenario}</span>
-                `)
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 10) + "px")
-                .style("opacity", 1);
-                
-                d3.select(this).style("opacity", 1).attr("r", 6);
-            })
-            .on("mouseout", function() {
-                tooltip.style("opacity", 0);
-                d3.select(this).style("opacity", 0).attr("r", 4);
-            });
+            .text("The Melting Polar Ice Caps");
 
         // Divider line at 2014/2015
-        svg.append("line")
+        const dividerLine = svg.append("line")
             .attr("class", "divider-line")
             .attr("x1", x(2014.5))
             .attr("x2", x(2014.5))
@@ -1394,54 +1355,204 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("y2", height)
             .attr("stroke", "#666")
             .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "4 2");
+            .attr("stroke-dasharray", "6 3")
+            .style("opacity", 0.6);
 
-        // Legend
-        const legend = svg.append("g")
-            .attr("class", "legend")
-            .attr("transform", `translate(${width - 200}, 30)`);
+        svg.append("text")
+            .attr("x", x(2014.5))
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "11px")
+            .attr("fill", "#666")
+            .text("Historical → Projected");
 
-        const legendData = [
-            { label: "Historical", color: "#2563eb", dash: "" },
-            { label: "Projected (SSP2-4.5)", color: "#dc2626", dash: "8,4" }
-        ];
+        const historicalArea = svg.append("path")
+            .datum(historicalData)
+            .attr("class", "ice-area historical")
+            .attr("fill", "url(#iceGradient)")
+            .attr("opacity", 0.7)
+            .attr("d", area);
 
-        legend.selectAll("line")
-            .data(legendData)
-            .join("line")
-            .attr("x1", 0)
-            .attr("x2", 20)
-            .attr("y1", (d, i) => i * 25)
-            .attr("y2", (d, i) => i * 25)
-            .attr("stroke", d => d.color)
+        const projectedArea = svg.append("path")
+            .datum(projectedData)
+            .attr("class", "ice-area projected")
+            .attr("fill", "url(#iceGradient)")
+            .attr("opacity", 0)
+            .attr("d", area);
+
+        // Draw line (historical)
+        const historicalLine = svg.append("path")
+            .datum(historicalData)
+            .attr("class", "ice-line historical")
+            .attr("fill", "none")
+            .attr("stroke", "#0284C7")
+            .attr("stroke-width", 4)
+            .attr("d", line);
+
+        const projectedLine = svg.append("path")
+            .datum(projectedData)
+            .attr("class", "ice-line projected")
+            .attr("fill", "none")
+            .attr("stroke", "#DC2626")
+            .attr("stroke-width", 4)
+            .attr("stroke-dasharray", "10 5")
+            .attr("opacity", 0)
+            .attr("d", line);
+
+        // Year indicator circle
+        const yearIndicator = svg.append("circle")
+            .attr("class", "year-indicator")
+            .attr("r", 8)
+            .attr("fill", "#EF4444")
+            .attr("stroke", "white")
             .attr("stroke-width", 3)
-            .attr("stroke-dasharray", d => d.dash);
+            .style("opacity", 0)
+            .style("filter", "drop-shadow(0 0 6px rgba(239, 68, 68, 0.8))");
 
-        legend.selectAll("text")
-            .data(legendData)
-            .join("text")
-            .attr("x", 25)
-            .attr("y", (d, i) => i * 25 + 5)
-            .attr("font-size", "12px")
-            .text(d => d.label);
+        // Year label
+        const yearLabel = svg.append("text")
+            .attr("class", "year-label")
+            .attr("text-anchor", "middle")
+            .attr("font-size", "16px")
+            .attr("font-weight", "bold")
+            .attr("fill", "#1F2937")
+            .style("opacity", 0);
 
-        // Annotation showing decline
-        if (historicalData.length > 0 && projectedData.length > 0) {
-            const firstValue = historicalData[0].siconc;
-            const lastValue = projectedData[projectedData.length - 1].siconc;
-            const decline = firstValue - lastValue;
-            const percentDecline = (decline / firstValue * 100).toFixed(1);
+        // Tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("position", "fixed")
+            .style("background", "rgba(255, 255, 255, 0.95)")
+            .style("border", "2px solid #0284C7")
+            .style("border-radius", "8px")
+            .style("padding", "10px 14px")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .style("font-size", "13px")
+            .style("box-shadow", "0 4px 12px rgba(0,0,0,0.15)")
+            .style("z-index", "1000");
 
-            svg.append("text")
-                .attr("x", width / 2)
-                .attr("y", height + 70)
-                .attr("text-anchor", "middle")
-                .attr("font-size", "12px")
-                .attr("fill", "#666")
-                .text(`Sea ice concentration declined by ${decline.toFixed(1)}% (${percentDecline}% decrease) from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year}`);
+        // Update function for animation
+        function updateVisualization(yearIndex) {
+            if (yearIndex < 0 || yearIndex >= allData.length) return;
+            
+            currentYearIndex = yearIndex;
+            const currentData = allData[yearIndex];
+            const dataToShow = allData.slice(0, yearIndex + 1);
+            
+            // Separate historical and projected
+            const histToShow = dataToShow.filter(d => d.scenario === "historical");
+            const projToShow = dataToShow.filter(d => d.scenario === "ssp245");
+            
+            // Update historical area and line
+            historicalArea.datum(histToShow).transition().duration(300).attr("d", area);
+            historicalLine.datum(histToShow).transition().duration(300).attr("d", line);
+            
+            // Update projected area and line if we're past 2014
+            if (currentData.year >= 2015) {
+                projectedArea.datum(projToShow)
+                    .transition().duration(300)
+                    .attr("d", area)
+                    .attr("opacity", 0.5);
+                projectedLine.datum(projToShow)
+                    .transition().duration(300)
+                    .attr("d", line)
+                    .attr("opacity", 1);
+            } else {
+                projectedArea.transition().duration(300).attr("opacity", 0);
+                projectedLine.transition().duration(300).attr("opacity", 0);
+            }
+            
+            // Update year indicator
+            yearIndicator
+                .transition().duration(300)
+                .attr("cx", x(currentData.year))
+                .attr("cy", y(currentData.siconc))
+                .style("opacity", 1);
+            
+            // Update year label
+            yearLabel
+                .attr("x", x(currentData.year))
+                .attr("y", y(currentData.siconc) - 20)
+                .text(currentData.year)
+                .transition().duration(300)
+                .style("opacity", 1);
         }
 
-        // Hover overlay for better interaction
+        // Animation controls
+        container.selectAll(".ice-controls").remove();
+        const controlsDiv = container.append("div")
+            .attr("class", "ice-controls")
+            .style("text-align", "center")
+            .style("margin-top", "25px")
+            .style("margin-bottom", "10px")
+            .style("width", "100%")
+            .style("position", "relative")
+            .style("z-index", "10");
+
+        const playPauseBtn = controlsDiv.append("button")
+            .text("▶ Play Animation")
+            .style("padding", "10px 25px")
+            .style("font-size", "14px")
+            .style("font-weight", "600")
+            .style("border", "2px solid #0284C7")
+            .style("border-radius", "6px")
+            .style("background", "#0284C7")
+            .style("color", "white")
+            .style("cursor", "pointer")
+            .style("margin-right", "10px")
+            .on("mouseover", function() {
+                d3.select(this).style("background", "#0369A1");
+            })
+            .on("mouseout", function() {
+                d3.select(this).style("background", "#0284C7");
+            })
+            .on("click", function() {
+                if (isPlaying) {
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    d3.select(this).text("▶ Play Animation");
+                } else {
+                    isPlaying = true;
+                    d3.select(this).text("⏸ Pause");
+                    animationInterval = setInterval(() => {
+                        if (currentYearIndex < allData.length - 1) {
+                            updateVisualization(currentYearIndex + 1);
+                        } else {
+                            isPlaying = false;
+                            clearInterval(animationInterval);
+                            d3.select(this).text("▶ Play Animation");
+                        }
+                    }, 100); // 100ms per year = fast animation
+                }
+            });
+
+        controlsDiv.append("button")
+            .text("Reset")
+            .style("padding", "10px 20px")
+            .style("font-size", "14px")
+            .style("font-weight", "600")
+            .style("border", "2px solid #6B7280")
+            .style("border-radius", "6px")
+            .style("background", "white")
+            .style("color", "#374151")
+            .style("cursor", "pointer")
+            .on("mouseover", function() {
+                d3.select(this).style("background", "#F3F4F6");
+            })
+            .on("mouseout", function() {
+                d3.select(this).style("background", "white");
+            })
+            .on("click", function() {
+                isPlaying = false;
+                clearInterval(animationInterval);
+                currentYearIndex = 0;
+                updateVisualization(0);
+                playPauseBtn.text("▶ Play Animation");
+            });
+
+        // Interactive overlay
         svg.append("rect")
             .attr("class", "overlay")
             .attr("width", width)
@@ -1458,16 +1569,76 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 const scenario = nearestPoint.scenario === "historical" ? "Historical" : "Projected (SSP2-4.5)";
                 tooltip.html(`
                     <strong>${nearestPoint.year}</strong><br>
-                    Sea Ice Concentration: ${nearestPoint.siconc.toFixed(2)}%<br>
-                    <span style="color:#666">${scenario}</span>
+                    Ice Concentration: <strong>${nearestPoint.siconc.toFixed(2)}%</strong><br>
+                    <span style="color:#666; font-size:11px">${scenario}</span>
                 `)
-                .style("left", (event.pageX + 10) + "px")
+                .style("left", (event.pageX + 15) + "px")
                 .style("top", (event.pageY - 10) + "px")
                 .style("opacity", 1);
             })
             .on("mouseout", () => {
                 tooltip.style("opacity", 0);
+            })
+            .on("click", function(event) {
+                const [mx] = d3.pointer(event);
+                const yearScale = x.invert(mx);
+                const nearestIndex = allData.findIndex((d, i) => 
+                    i === allData.length - 1 || 
+                    Math.abs(d.year - yearScale) < Math.abs(allData[i + 1].year - yearScale)
+                );
+                if (nearestIndex >= 0) {
+                    isPlaying = false;
+                    clearInterval(animationInterval);
+                    playPauseBtn.text("▶ Play Animation");
+                    updateVisualization(nearestIndex);
+                }
             });
+
+        // Legend
+        const legend = svg.append("g")
+            .attr("class", "legend")
+            .attr("transform", `translate(${width - 180}, 40)`);
+
+        const legendData = [
+            { label: "Historical", color: "#0284C7" },
+            { label: "Projected", color: "#DC2626" }
+        ];
+
+        legend.selectAll("rect")
+            .data(legendData)
+            .join("rect")
+            .attr("x", 0)
+            .attr("y", (d, i) => i * 30)
+            .attr("width", 20)
+            .attr("height", 4)
+            .attr("fill", d => d.color);
+
+        legend.selectAll("text")
+            .data(legendData)
+            .join("text")
+            .attr("x", 28)
+            .attr("y", (d, i) => i * 30 + 8)
+            .attr("font-size", "13px")
+            .attr("fill", "#374151")
+            .text(d => d.label);
+
+        // Initial display - show all historical data
+        updateVisualization(historicalData.length - 1);
+
+        // Stats annotation
+        if (historicalData.length > 0 && projectedData.length > 0) {
+            const firstValue = historicalData[0].siconc;
+            const lastValue = projectedData[projectedData.length - 1].siconc;
+            const decline = firstValue - lastValue;
+            const percentDecline = (decline / firstValue * 100).toFixed(1);
+
+            container.append("div")
+                .style("text-align", "center")
+                .style("margin-top", "10px")
+                .style("font-size", "13px")
+                .style("color", "#6B7280")
+                .html(`<strong>${percentDecline}% decline</strong> in sea ice concentration from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year} (${decline.toFixed(1)}% absolute decrease)`);
+        }
 
     }).catch(err => console.error(err));
 }
@@ -1490,5 +1661,5 @@ initStripesAndCountryMap();
 
 drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
 
-drawDecadeWarming("decade-warming", "./data/country_temp_anomaly_1950_2050.csv");
+drawSeaIceConcentration("decade-warming", "./data/siconc_annual_mean_polar.csv");
 
