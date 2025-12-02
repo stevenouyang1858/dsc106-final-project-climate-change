@@ -547,7 +547,6 @@ function setupScrollama() {
                 drawPredictionLine("ssp245");
                 visibleLines = ["ssp245"];
                 updateLegendHighlight();
-                showText("Adding SSP2-4.5: moderate emissions scenario.");
                 break;
             case 2:
                 drawPredictionLine("ssp245");
@@ -555,7 +554,6 @@ function setupScrollama() {
                 drawPredictionLine("ssp585");
                 visibleLines = ["ssp245","ssp370","ssp585"];
                 updateLegendHighlight();
-                showText("Adding SSP3-7.0 and SSP5-8.5: high emissions scenarios.");
                 break;
             case 3:
                 drawPredictionLine("ssp245");
@@ -564,7 +562,6 @@ function setupScrollama() {
                 drawPredictionLine("ssp126");
                 visibleLines = ["ssp245","ssp370","ssp585","ssp126"];
                 updateLegendHighlight();
-                showText("Overlaying SSP1-2.6: low emissions scenario.");
                 break;
             case 4:
                 drawSelectedPredictionLines(["ssp126","ssp245","ssp370","ssp585"]);
@@ -586,42 +583,6 @@ function setupScrollama() {
     window.addEventListener("resize", scroller.resize);
     
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//MAP INTERACTION
-
-const svg = d3.select("#map");
-const width = +svg.attr("width") || 960;
-const height = +svg.attr("height") || 500;
-
-const projection = d3.geoNaturalEarth1()
-  .scale(160)
-  .translate([width / 2, height / 2]);
-
-const path = d3.geoPath().projection(projection);
-
-d3.json("./countries.geojson").then(world => {
-  svg.append("g")
-    .selectAll("path")
-    .data(world.features)
-    .join("path")
-      .attr("class", "country")    // use CSS styling
-      .attr("d", path);
-});
-
 
 // Stripe and Map 
 function initStripesAndCountryMap() {
