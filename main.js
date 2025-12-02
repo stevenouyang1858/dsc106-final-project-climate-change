@@ -1035,18 +1035,26 @@ function drawRegionalComparison(containerId, csvPath) {
     .text("Clear All")
     .style("margin-bottom", "10px")
     .style("padding", "6px 10px")
-    .style("width", "100%")
+    .style("width", "90%")
+    .style("margin-left", "auto")
+    .style("margin-right", "auto")
     .style("cursor", "pointer")
     .style("background", "#eee")
     .style("border", "1px solid #ccc")
     .style("border-radius", "4px")
     .style("font-size", "12px")
     .on("click", () => {
+        searchInput.property("value", "");
+        countryCheckboxes.selectAll(".country-option").style("display", null);
         countryCheckboxes.selectAll("input[type='checkbox']")
             .property("checked", false);
         selectedCountries = [];
+        svg.selectAll(".country-line").remove();
+        svg.selectAll(".country-points").remove();
+        svg.selectAll(".legend").remove();
         updateLines();
     });
+
 
     const countryCheckboxes = controlBox.append("div")
         .attr("id", "country-checkboxes")
@@ -1684,7 +1692,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 .style("margin-top", "10px")
                 .style("font-size", "13px")
                 .style("color", "#6B7280")
-                .html(`<strong>${percentDecline}% decline</strong> in sea ice concentration from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year} (${decline.toFixed(1)}% absolute decrease)`);
+                .html(`<strong>${percentDecline}% decline</strong> in sea ice concentration from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year} (${decline.toFixed(1)}% absolute decrease) <br> (Historical and Projected data use different models, which is why the chart is not continuous.)`);
         }
 
     }).catch(err => console.error(err));
