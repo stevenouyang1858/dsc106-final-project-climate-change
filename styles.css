@@ -2,9 +2,9 @@ body {
     margin: 0;
     padding: 0;
     display: flex;
-    flex-direction: column;  /* stack elements vertically */
-    align-items: center;     /* center horizontally */
-    justify-content: flex-start; /* start from top */
+    flex-direction: column; 
+    align-items: center;     
+    justify-content: flex-start; 
     font-family: sans-serif;
     background-color: #f7f7f7;
     min-height: 100vh;
@@ -18,19 +18,26 @@ h1 {
     color: #333;
 }
 
+.text-box {
+    max-width: 800px;     
+    margin: 30px auto;     
+    padding: 20px 30px;
+    background-color: #ffffff;
+    border-radius: 12px;   
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    text-align: center;    
+    line-height: 1.6;      
+}
 
-
-/* Line plot and the scrollytelling */
 #story section {
-    min-height: 80vh;
-    padding: 2em;
-    display: flex;         
+    min-height: 80vh;           /* height of each step */
+    display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;  
-    text-align: center;     
-    padding: 2em;           
-    border-bottom: none;
+    justify-content: center;     /* vertical centering */
+    align-items: center;         /* horizontal centering */
+    text-align: center;
+    padding: 2em;
+    box-sizing: border-box;
 }
 
 /* Container for scroll-driven line chart */
@@ -46,25 +53,17 @@ h1 {
 
 /* Scrollable text column */
 #story {
-    flex: 1;           /* takes available space on the left */
-    max-width: 400px;  /* optional limit for readability */
+    flex: 1;    
+    max-width: 400px;
+    flex-direction: column;  
 }
 
 /* Sticky chart column */
 #linechart-container {
-    flex: 2;                  
+    flex: 2;                  /* larger than text */
     position: sticky;          /* stay in view */
-    top: 120px;
-    height: 500px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#linechart-container svg {
-    max-height: 100%;
-    max-width: 100%;
-    display: block;
+    top: 120px;                 /* distance from top while scrolling */
+    height: 500px;             /* match chart height */
 }
 
 
@@ -75,7 +74,7 @@ h1 {
 }
 
 .tooltip {
-    position: fixed;
+    position: fixed;      /* THIS IS THE KEY */
     background: white;
     padding: 6px 10px;
     border: 1px solid #888;
@@ -132,6 +131,8 @@ h1 {
     accent-color: inherit;
     display: none;
 }
+
+
 
 /* Visualization section styling */
 .viz-section {
