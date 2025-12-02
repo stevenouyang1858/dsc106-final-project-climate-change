@@ -162,11 +162,34 @@ h1 {
 #regional-comparison, #decade-warming {
     margin: 20px auto;
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
     background-color: white;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 650px;
+    overflow: visible;
+}
+
+#decade-warming {
+    position: relative;
+    z-index: 1;
+    overflow: visible !important;
+}
+
+#decade-warming svg {
+    display: block;
+    margin: 0 auto;
+}
+
+.ice-controls {
+    z-index: 10;
+    position: relative;
+    clear: both;
+    width: 100%;
+    margin: 20px 0 10px 0;
 }
 
 #scatterplot {

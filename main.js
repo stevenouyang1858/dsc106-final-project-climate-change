@@ -902,7 +902,6 @@ drawCO2LineChart(
 
 drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
 
-drawSeaIceConcentration("decade-warming", "./data/siconc_annual_mean_polar.csv");
 function drawRegionalComparison(containerId, csvPath) {
     const margin = { top: 40, right: 200, bottom: 60, left: 80 };
     const width = 1000 - margin.left - margin.right;
@@ -1177,8 +1176,8 @@ function drawSeaIceConcentration(containerId, csvPath) {
     const height = 550 - margin.top - margin.bottom;
 
     const container = d3.select(`#${containerId}`);
-    container.selectAll("svg").remove();
-    container.selectAll(".ice-controls").remove();
+    // Clear everything in the container
+    container.selectAll("*").remove();
 
     const svg = container
         .append("svg")
@@ -1414,11 +1413,16 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 .style("opacity", 1);
         }
 
-        // Animation controls
+        // Animation controls - clear any existing ones first
+        container.selectAll(".ice-controls").remove();
         const controlsDiv = container.append("div")
             .attr("class", "ice-controls")
             .style("text-align", "center")
-            .style("margin-top", "15px");
+            .style("margin-top", "20px")
+            .style("margin-bottom", "10px")
+            .style("width", "100%")
+            .style("z-index", "10")
+            .style("position", "relative");
 
         const playPauseBtn = controlsDiv.append("button")
             .text("▶ Play Animation")
