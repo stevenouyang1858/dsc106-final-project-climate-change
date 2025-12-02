@@ -591,13 +591,16 @@ function initStripesAndCountryMap() {
   const worldGeoJsonPath = "world.geojson";
 
   const stripeMargin = { top: 10, right: 10, bottom: 20, left: 10 };
-  const stripeWidth = 900;
+  const stripeWidth = 960;
   const stripeHeight = 80;
 
-  const mapWidth = 900;
+  const mapWidth = 1000;
   const mapHeight = 460;
 
-  const noDataColor = "#444";
+  let activeCountry = null;
+  let countriesGroup;
+  
+  const noDataColor = "#e0e0e0";
 
   const stripeSvg = d3.select("#stripe-container")
     .append("svg")
@@ -669,7 +672,7 @@ function initStripesAndCountryMap() {
       .domain([stripeHi, 0, stripeLo])
       .interpolator(d3.interpolateRdBu)
       .clamp(true)
-      .unknown("#222");
+      .unknown("#f0f0f0");
 
 
     // color scale for map
@@ -681,7 +684,7 @@ function initStripesAndCountryMap() {
       .domain([mapHi, 0, mapLo])
       .interpolator(d3.interpolateRdBu)
       .clamp(true)
-      .unknown("#222");
+      .unknown("#f0f0f0");
 
     drawStripes();
     drawMapBase();
@@ -757,7 +760,7 @@ function initStripesAndCountryMap() {
           .tickSize(3)
       )
       .call(g => g.selectAll("text")
-        .attr("fill", "#ddd")
+        .attr("fill", "#000")
         .attr("font-size", 10))
       .call(g => g.selectAll("line").attr("stroke", "#777"))
       .call(g => g.select(".domain").attr("stroke", "#777"));
@@ -779,7 +782,7 @@ function initStripesAndCountryMap() {
         .attr("x2", xBoundary)
         .attr("y1", stripeMargin.top)
         .attr("y2", stripeHeight - stripeMargin.bottom)
-        .attr("stroke", "#f5f5f5")
+        .attr("stroke", "#000")
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "4,4")
         .attr("opacity", 0.8);
@@ -811,10 +814,12 @@ function initStripesAndCountryMap() {
       .attr("y", 0)
       .attr("width", mapWidth)
       .attr("height", mapHeight)
-      .attr("fill", "#111");
+      .attr("fill", "#ffffff");
 
-    mapSvg.append("g")
-      .attr("class", "countries")
+    countriesGroup = mapSvg.append("g")
+      .attr("class", "countries");
+
+    const countries = countriesGroup
       .selectAll("path")
       .data(worldFeatures)
       .enter()
@@ -822,8 +827,8 @@ function initStripesAndCountryMap() {
       .attr("class", "country")
       .attr("d", path)
       .attr("fill", noDataColor)
-      .attr("stroke", "#555")
-      .attr("stroke-width", 0.5)
+      .attr("stroke", "#999")
+      .attr("stroke-width", 0.6)
       .on("mousemove", function (event, d) {
         const name = d.properties.name;
         const anomaly = d.properties.anomaly;
@@ -845,6 +850,37 @@ function initStripesAndCountryMap() {
       })
       .on("mouseout", function () {
         tooltip.style("display", "none");
+      })
+      .on("click", function (event, d) {
+        if (activeCountry === d) {
+          activeCountry = null;
+          countriesGroup
+            .transition()
+            .duration(750)
+            .attr("transform", "translate(0,0) scale(1)");
+          return;
+        }
+
+        activeCountry = d;
+
+        const [[x0, y0], [x1, y1]] = path.bounds(d);
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        const x = (x0 + x1) / 2;
+        const y = (y0 + y1) / 2;
+
+        const scale = Math.min(
+          4,
+          0.9 / Math.max(dx / mapWidth, dy / mapHeight)
+        );
+
+        const translateX = mapWidth / 2 - scale * x;
+        const translateY = mapHeight / 2 - scale * y;
+
+        countriesGroup
+          .transition()
+          .duration(750)
+          .attr("transform", `translate(${translateX},${translateY}) scale(${scale})`);
       });
   }
 
