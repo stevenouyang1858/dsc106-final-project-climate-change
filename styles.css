@@ -29,12 +29,83 @@ h1 {
     line-height: 1.6;      
 }
 
+/*scatter plot */
+
+#scatter-slider-wrapper {
+  width: 100%;       /* allow full width */
+  max-width: 800px;  /* optional max width */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Base slider styles */
+#slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* space between slider and label */
+  width: 100%;
+  max-width: 700px;
+  flex-wrap: nowrap;
+}
+
+#year-slider {
+  flex: 1 1 auto;
+  -webkit-appearance: none;
+  height: 10px;
+  border-radius: 5px;
+  background: #ccc; /* track fallback */
+  min-width: 0;
+}
+
+/* Track fill (gradient handled by JS) */
+#year-slider::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 5px;
+}
+
+#year-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+}
+
+/* Thumb stays black */
+#year-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(149, 131, 131); /* static black thumb */
+  border: 2px solid #666;
+  cursor: pointer;
+  margin-top: -5px; /* center thumb */
+}
+
+#year-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(149, 131, 131); /* static black thumb */
+  border: 2px solid #666;
+  cursor: pointer;
+}
+
+#year-label {
+  white-space: nowrap;    /* prevent label from wrapping */
+}
+
+
+
+
+
+/*line plot */
+
 #story section {
-    min-height: 80vh;           /* height of each step */
+    min-height: 80vh;   
     display: flex;
     flex-direction: column;
-    justify-content: center;     /* vertical centering */
-    align-items: center;         /* horizontal centering */
+    justify-content: center; 
+    align-items: center;  
     text-align: center;
     padding: 2em;
     box-sizing: border-box;
@@ -43,10 +114,10 @@ h1 {
 /* Container for scroll-driven line chart */
 #linechart-wrapper {
     display: flex;
-    flex-direction: row; /* left text, right chart */
+    flex-direction: row; 
     align-items: flex-start;
-    gap: 40px; /* space between text and chart */
-    margin: 50px 20px; /* optional margin around the container */
+    gap: 40px;
+    margin: 50px 20px;
     width: 100%;
     max-width: 1200px;
 }

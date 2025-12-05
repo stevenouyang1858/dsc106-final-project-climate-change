@@ -40,6 +40,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .domain([d3.min(data, d => d.temp) * 1, d3.max(data, d => d.temp) * 1.1])
             .range([height, 0]);
 
+
         // Axes
         svg.append("g")
             .attr("transform", `translate(0,${height})`)
@@ -72,7 +73,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
             .style("font-weight", "600")
-            .text("CO₂ Mass vs Surface Temperature Anomaly");
+            .text("Higher Temperature, More CO₂");
 
         // tooltip
         const tooltip = d3.select("body")
@@ -93,6 +94,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("cy", d => y(d.temp))
             .attr("r", 5)
             .attr("fill", d => color(d.year))
+            .attr("opacity", 0.25)
             .on("mouseover", (event, d) => {
                 tooltip.html(`Year: ${d.year}<br>CO₂: ${d.co2}<br>Temp: ${d.temp}`)
                     .style("left", (event.clientX + 10) + "px")
@@ -100,6 +102,63 @@ function drawCO2TempScatter(containerId, csvPath) {
                     .style("opacity", 0.9);
             })
             .on("mouseout", () => tooltip.style("opacity", 0));
+        
+        const slider = document.getElementById("year-slider");
+        const yearLabel = document.getElementById("year-label");
+
+        const years = data.map(d => d.year);
+        slider.min = d3.min(years);
+        slider.max = d3.max(years);
+        slider.step = 2;  // match your data spacing
+        slider.value = slider.min;
+
+        // Initial state
+        yearLabel.textContent = "(slide for year)";
+        svg.selectAll("circle").attr("opacity", 0.3);
+
+        // Function to update slider track fill
+        function updateSliderFill(selectedYear) {
+            const min = +slider.min;
+            const max = +slider.max;
+            const pct = ((selectedYear - min) / (max - min)) * 100;
+            const yearColor = color(selectedYear);
+
+            // Update track gradient
+            slider.style.background = `linear-gradient(to right, ${yearColor} ${pct}%, #ccc ${pct}%)`;
+
+            // Update thumb color
+            slider.style.setProperty('--thumb-color', yearColor);
+        }
+
+        // Initialize slider fill
+        updateSliderFill(slider.value);
+
+        // Event listener
+        slider.addEventListener("input", () => {
+            const rawVal = +slider.value;
+
+            // Snap to nearest dataset year
+            const snappedYear = years.reduce((a, b) =>
+                Math.abs(b - rawVal) < Math.abs(a - rawVal) ? b : a
+            );
+
+            slider.value = snappedYear;
+
+            // Update label: show "slide for year" if at min, otherwise show year
+            yearLabel.textContent = (snappedYear === +slider.min) ? "(slide for year)" : snappedYear;
+
+            // Update slider fill using Viridis color
+            updateSliderFill(snappedYear);
+
+            // Update circle opacity/radius
+            svg.selectAll("circle")
+                .filter(d => d)
+                .attr("opacity", d => d.year <= snappedYear ? 1 : 0.3)
+                .attr("r", d => d.year === snappedYear ? 7 : 5);
+        });
+
+
+
 
         // LINEAR REGRESSION
         function linearRegression(points) {
