@@ -63,7 +63,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("transform", "rotate(-90)")
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
-            .text("Surface Temperature Anomoly (°C)");
+            .text("Surface Temperature Anomaly (°C)");
 
         // Add chart title
         svg.append("text")
@@ -1517,7 +1517,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
         const yearIndicator = svg.append("circle")
             .attr("class", "year-indicator")
             .attr("r", 8)
-            .attr("fill", "#EF4444")
+            .attr("fill", "#8B5CF6")
             .attr("stroke", "white")
             .attr("stroke-width", 3)
             .style("opacity", 0)
@@ -1550,49 +1550,43 @@ function drawSeaIceConcentration(containerId, csvPath) {
         // Update function for animation
         function updateVisualization(yearIndex) {
             if (yearIndex < 0 || yearIndex >= allData.length) return;
-            
             currentYearIndex = yearIndex;
             const currentData = allData[yearIndex];
             const dataToShow = allData.slice(0, yearIndex + 1);
-            
-            // Separate historical and projected
             const histToShow = dataToShow.filter(d => d.scenario === "historical");
             const projToShow = dataToShow.filter(d => d.scenario === "ssp245");
-            
-            // Update historical area and line
-            historicalArea.datum(histToShow).transition().duration(300).attr("d", area);
-            historicalLine.datum(histToShow).transition().duration(300).attr("d", line);
-            
-            // Update projected area and line if we're past 2014
-            if (currentData.year >= 2015) {
-                projectedArea.datum(projToShow)
-                    .transition().duration(300)
+
+            historicalArea.datum(histToShow).attr("d", area);
+
+            historicalLine.datum(histToShow).attr("d", line);
+
+            if (currentData.year >= 2015 && projToShow.length > 0) {
+                projectedArea
+                    .datum(projToShow)
                     .attr("d", area)
                     .attr("opacity", 0.5);
-                projectedLine.datum(projToShow)
-                    .transition().duration(300)
+
+                projectedLine
+                    .datum(projToShow)
                     .attr("d", line)
                     .attr("opacity", 1);
             } else {
-                projectedArea.transition().duration(300).attr("opacity", 0);
-                projectedLine.transition().duration(300).attr("opacity", 0);
+                projectedArea.attr("opacity", 0);
+                projectedLine.attr("opacity", 0);
             }
-            
-            // Update year indicator
+
             yearIndicator
-                .transition().duration(300)
                 .attr("cx", x(currentData.year))
                 .attr("cy", y(currentData.siconc))
                 .style("opacity", 1);
-            
-            // Update year label
+
             yearLabel
                 .attr("x", x(currentData.year))
                 .attr("y", y(currentData.siconc) - 20)
                 .text(currentData.year)
-                .transition().duration(300)
                 .style("opacity", 1);
         }
+
 
         // Animation controls
         container.selectAll(".ice-controls").remove();
@@ -1638,7 +1632,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
                             clearInterval(animationInterval);
                             d3.select(this).text("▶ Play Animation");
                         }
-                    }, 100); // 100ms per year = fast animation
+                    }, 140); // 100ms per year = fast animation
                 }
             });
 
@@ -1751,7 +1745,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 .style("margin-top", "10px")
                 .style("font-size", "13px")
                 .style("color", "#6B7280")
-                .html(`<strong>${percentDecline}% decline</strong> in sea ice concentration from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year} (${decline.toFixed(1)}% absolute decrease) <br> (Historical and Projected data use different models, which is why the chart is not continuous.)`);
+                .html(`<strong>${percentDecline}% decline</strong> in sea ice concentration from ${historicalData[0].year} to ${projectedData[projectedData.length - 1].year} (${decline.toFixed(1)}% absolute decrease)`);
         }
 
     }).catch(err => console.error(err));
@@ -1764,7 +1758,6 @@ function drawSeaIceConcentration(containerId, csvPath) {
 
 drawCO2TempScatter("scatterplot", "./data/co2_surfacetemp_biannual_scatterplot_1950_2014.csv");
 
-// Call line function
 drawCO2LineChart(
     "linechart",
     "./data/co2mass_historical_1950_2014_yearly.csv",
