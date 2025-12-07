@@ -23,8 +23,8 @@ function drawCO2TempScatter(containerId, csvPath) {
     // load
     d3.csv(csvPath, d => ({
         year: +d.time,
-        co2: +d.co2 / 1e14,
-        temp: +d.temp
+        co2: +(d.co2 / 1e14).toFixed(4),
+        temp: +(+d.temp).toFixed(4)
     })).then(data => {
         // color scale by year
         const color = d3.scaleSequential()
@@ -96,7 +96,9 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("fill", d => color(d.year))
             .attr("opacity", 0.25)
             .on("mouseover", (event, d) => {
-                tooltip.html(`Year: ${d.year}<br>CO₂: ${d.co2}<br>Temp: ${d.temp}`)
+                tooltip.html(`<b>Year:</b> ${d.year}<br>
+                    <b>CO₂:</b> ${d.co2}<br>
+                    <b>Temperature Anomaly:</b> ${d.temp} °C`)
                     .style("left", (event.clientX + 10) + "px")
                     .style("top", (event.clientY + 10) + "px")
                     .style("opacity", 0.9);
@@ -246,8 +248,8 @@ function drawCO2TempScatter(containerId, csvPath) {
                     .attr("opacity", 1);
 
                 regTooltip.html(
-                    `Predicted CO₂: ${clampedX.toFixed(2)}<br>` +
-                    `Predicted Surface Temperature Anomoly: ${predTemp.toFixed(3)}°C`
+                    `<b>Predicted CO₂:</b> ${clampedX.toFixed(4)}<br>` +
+                    `<b>Predicted Temperature Anomoly:</b> ${predTemp.toFixed(4)} °C`
                 )
                 .style("left", (event.clientX + 10) + "px")
                 .style("top", (event.clientY + 10) + "px")
@@ -312,7 +314,7 @@ let lineChartState = {};
 // drawing line chart
 function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
     const margin = { top: 60, right: 120, bottom: 40, left: 140 };
-    const width = 900 - margin.left - margin.right;
+    const width = 850 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
     let lastMouseX = 0;
@@ -388,7 +390,7 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
             .style("font-weight", "600")
-            .text("Historical & Projected Atmospheric CO₂ Levels");
+            .text("Rising CO₂: Where We’ve Been & Where We’re Headed");
         //axis label
         svg.append("text")
             .attr("class", "x axis-label")
@@ -514,12 +516,26 @@ function drawPredictionLine(key) {
        .attr("opacity", 1);
 }
 
+function drawDimmedPredictionLine(key) {
+    const { svg, line, colorMap, predictions } = lineChartState;
+    svg.append("path")
+       .datum(predictions.map(d => ({ year: d.year, value: d[key] })))
+       .attr("class", `line prediction ${key}`)
+       .attr("stroke", colorMap[key])
+       .attr("fill", "none")
+       .attr("stroke-width", 2)
+       .attr("d", line)
+       .transition()
+       .duration(400)
+       .attr("opacity", 0.1);
+}
+
 function removePredictionLines() {
     const { svg } = lineChartState;
     svg.selectAll(".line.prediction").transition()
         .duration(400)
-        .attr("opacity", 0)
-        .remove();;
+        .attr("opacity", 0.0)
+        .remove();
 }
 function updateLegendHighlight() {
     const legendMap = {
@@ -555,6 +571,7 @@ function drawSelectedPredictionLines(keys) {
     visibleLines = keys;
 }
 
+
 function showText(text) {
     d3.select("#story-text").html(text);
 }
@@ -589,7 +606,6 @@ function setupScrollama() {
 
         switch(index) {
             case 0:
-                showText("Historical CO₂ data is shown here.");
                 visibleLines = [];
                 updateLegendHighlight();
                 break;
@@ -599,21 +615,28 @@ function setupScrollama() {
                 updateLegendHighlight();
                 break;
             case 2:
-                drawPredictionLine("ssp245");
+                drawDimmedPredictionLine("ssp245");
                 drawPredictionLine("ssp370");
                 drawPredictionLine("ssp585");
                 visibleLines = ["ssp245","ssp370","ssp585"];
                 updateLegendHighlight();
                 break;
             case 3:
-                drawPredictionLine("ssp245");
+                drawDimmedPredictionLine("ssp245");
                 drawPredictionLine("ssp370");
                 drawPredictionLine("ssp585");
+                visibleLines = ["ssp245","ssp370","ssp585"];
+                updateLegendHighlight();
+                break;
+            case 4:
+                drawDimmedPredictionLine("ssp245");
+                drawDimmedPredictionLine("ssp370");
+                drawDimmedPredictionLine("ssp585");
                 drawPredictionLine("ssp126");
                 visibleLines = ["ssp245","ssp370","ssp585","ssp126"];
                 updateLegendHighlight();
                 break;
-            case 4:
+            case 5:
                 drawSelectedPredictionLines(["ssp126","ssp245","ssp370","ssp585"]);
                 visibleLines = ["ssp126","ssp245","ssp370","ssp585"];
                 updateLegendHighlight();
