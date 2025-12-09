@@ -18,26 +18,24 @@
         embbed demo video link here please
     </div>
 
-    <section class="story-section">
-        <div class = "text-box" id="intro">
-            For millions of years, earth's temperature has warmed and cooled in a cyclic ways driven by natural wonders.
+    <div class = "text-box" id="intro">
+        For millions of years, earth’s temperature has warmed and cooled in a cyclic ways driven by natural wonders.
 
-            However, something different happened in the past two centuries. As industrial revolution happened around the world, 
-            humans began releasing an unprecedented amount of CO2, a type of greenhouse gas, into the atmosphere from factories, 
-            cars, and the burning of coal, oil, and gas. The scatter plot below proved this trend.
-        </div>
-        
-        <!--scatter plot-->
-        <div id="scatterplot"></div>
-        <div id="scatter-slider-wrapper">
-            <input type="range" id="year-slider" min="1950" max="2014" value="0" step="2">
-            <div id="year-label">(slide for year)</div>
-        </div>
+        However, something different happened in the past two centuries. As industrial revolution happened around the world, 
+        humans began releasing an unprecedented amount of CO2, a type of greenhouse gas, into the atmosphere from factories, 
+        cars, and the burning of coal, oil, and gas. The scatter plot below proved this trend.
+    </div>
+    
+    <!--scatter plot-->
+    <div id="scatterplot"></div>
+    <div id="scatter-slider-wrapper">
+        <input type="range" id="year-slider" min="1950" max="2014" value="0" step="2">
+        <div id="year-label">(slide for year)</div>
+    </div>
 
-        <div class="text-box" id="scatterplot-description">
-            This scatter plot plots the change in the average of bi-annual atmospheric CO₂ mass in 10 trillion kilograms compared to the average CO₂ mass between the years 1950 to 1980. From the plot, there is a strong correlation between temperature and atmospheric CO2 mass, meaning that the more greenhouse gas emitted from human activity, the hotter planet Earth gets.
-        </div>
-    </section>
+    <div class="text-box" id="scatterplot-description">
+        This scatter plot plots the change in the average of bi-annual atmospheric CO₂ mass in 10 trillion kilograms compared to the average CO₂ mass between the years 1950 to 1980. From the plot, there is a strong correlation between temperature and atmospheric CO2 mass, meaning that the more greenhouse gas emitted from human activity, the hotter planet Earth gets.
+    </div>
 
     
     <!--interactive line plot-->
@@ -93,13 +91,12 @@
     <!--Interactive Map -->
 
 
-    <section class="story-section">
-        <div class="text-box">
-            Changes in temperature happen slowly, so slowly that generations can pass without a noticeable difference in their lifetime. But as of recently, we can see that the change in temperature has sped up, and the effects aren't as subtle. <br><br>
-            The stripes below capture one way that the earth has changed in temperature, especially recently. Each stripe represents a year in time, starting from the mid-1900s and moving forward towards the present. At first, the colors are pale and blue, but as years get closer to the present, the colors darken, the blues disappear and are replaced with dark and ominous reds, showing how the world has heated up, not noticeable year to year, but noticeable decade to decade. <br><br>
-            By clicking on a stripe, we can see the world's warming distributed around the world, and by clicking on the map itself, we can zoom into individual countries, even the smaller ones harder to spot. Viewed together, the stripes and map reveal a clear trend: the world is warming and climate change is happening
-        </div>
-    </section>
+    <div class="text-box">
+    Changes in temperature happen slowly, so slowly that generations can pass without a noticeable difference in their lifetime. But as of recently, we can see that the change in temperature has sped up, and the effects aren’t as subtle. <br><br>
+    The stripes below capture one way that the earth has changed in temperature, especially recently. Each stripe represents a year in time, starting from the mid-1900s and moving forward towards the present. At first, the colors are pale and blue, but as years get closer to the present, the colors darken, the blues disappear and are replaced with dark and ominous reds, showing how the world has heated up, not noticeable year to year, but noticeable decade to decade. <br><br>
+    By clicking on a stripe, we can see the world's warming distributed around the world, and by clicking on the map itself, we can zoom into individual countries, even the smaller ones harder to spot. Viewed together, the stripes and map reveal a clear trend: the world is warming and climate change is happening
+  
+    </div>
     <!-- TAS Stripe and Map -->
     <div id="stripe-and-map">
         <h2>Global Warming: Climate Stripes & Country Anomalies</h2>
@@ -134,14 +131,7 @@
             <h3 id="map-title">Country Anomaly Map</h3>
             <div class="map-year-label" id="map-year-label"></div>
             </div>
-            <div class="map-controls-row">
-                <input id="country-search" type="text" placeholder="Search country..." />
-                <div class="zoom-controls">
-                    <button id="zoom-in-btn" class="zoom-btn">+</button>
-                    <button id="zoom-out-btn" class="zoom-btn">−</button>
-                    <button id="zoom-reset-btn" class="zoom-btn">Reset</button>
-                </div>
-            </div>
+            <input id="country-search" type="text" placeholder="Search country..." />
             <!-- Map SVG will be appended here -->
         </div>
     </div>
