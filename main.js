@@ -47,18 +47,18 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("class", "x-axis")
             .call(d3.axisBottom(x))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
         
         svg.append("g")
             .attr("class", "y-axis")
             .call(d3.axisLeft(y))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
 
         // axis label
@@ -67,7 +67,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("y", height + 45)
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text("CO₂ Mass (× 10¹⁴ kg)");
 
         svg.append("text")
@@ -76,7 +76,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("transform", "rotate(-90)")
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text("Surface Temperature Anomaly (°C)");
 
         // Add chart title
@@ -87,7 +87,7 @@ function drawCO2TempScatter(containerId, csvPath) {
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
             .style("font-weight", "600")
-            .style("fill", "#4b5563")
+            .style("fill", "#111827")
             .text("Higher Temperature, More CO₂");
 
         // tooltip
@@ -397,16 +397,16 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("transform", `translate(0,${height})`)
             .call(d3.axisBottom(x).tickFormat(d3.format("d")))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
         svg.append("g").attr("class", "y axis")
             .call(d3.axisLeft(y))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
 
         //title
@@ -417,7 +417,7 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
             .style("font-weight", "600")
-            .style("fill", "#4b5563")
+            .style("fill", "#111827")
             .text("Rising CO₂: Where We've Been & Where We're Headed");
         //axis label
         svg.append("text")
@@ -425,7 +425,7 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("text-anchor", "middle")
             .attr("x", width / 2)
             .attr("y", height + 35)
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text("Year");
 
         svg.append("text")
@@ -434,7 +434,7 @@ function drawCO2LineChart(containerId, historicalCSV, predictionsCSV) {
             .attr("transform", "rotate(-90)")
             .attr("x", -height / 2)
             .attr("y", -60)
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text("Atmospheric CO₂ mass (× 10¹⁴ kg)");
 
 
@@ -1212,16 +1212,19 @@ function drawRegionalComparison(containerId, csvPath) {
     
     const clearButton = controlBox.append("button")
     .text("Clear All")
+    .attr("class", "clear-all-btn")
     .style("margin-bottom", "10px")
     .style("padding", "6px 10px")
     .style("width", "90%")
     .style("margin-left", "auto")
     .style("margin-right", "auto")
     .style("cursor", "pointer")
-    .style("background", "#eee")
-    .style("border", "1px solid #ccc")
+    .style("background", "#f3f4f6")
+    .style("border", "1px solid #d1d5db")
     .style("border-radius", "4px")
     .style("font-size", "12px")
+    .style("color", "#111827")
+    .style("font-weight", "500")
     .on("click", () => {
         searchInput.property("value", "");
         countryCheckboxes.selectAll(".country-option").style("display", null);
@@ -1298,17 +1301,17 @@ function drawRegionalComparison(containerId, csvPath) {
             .attr("transform", `translate(0,${height})`)
             .call(d3.axisBottom(x).tickFormat(d3.format("d")))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
 
         svg.append("g")
             .call(d3.axisLeft(y))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
 
         // Axis labels
@@ -1565,17 +1568,17 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("transform", `translate(0,${height})`)
             .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(12))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
 
         const yAxis = svg.append("g")
             .call(d3.axisLeft(y).ticks(8))
             .call(g => {
-                g.selectAll("path").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("line").attr("stroke", "#9ca3af").attr("stroke-width", 1).attr("opacity", 1);
-                g.selectAll("text").attr("fill", "#4b5563").attr("font-size", "12px").attr("opacity", 1);
+                g.selectAll("path").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("line").attr("stroke", "#111827").attr("stroke-width", 1).attr("opacity", 1);
+                g.selectAll("text").attr("fill", "#111827").attr("font-size", "12px").attr("opacity", 1);
             });
 
         // Axis labels
@@ -1585,7 +1588,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("text-anchor", "middle")
             .attr("font-size", "15px")
             .attr("font-weight", "500")
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text("Year");
 
         svg.append("text")
@@ -1595,7 +1598,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("text-anchor", "middle")
             .attr("font-size", "15px")
             .attr("font-weight", "500")
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text("Sea Ice Concentration (%)");
 
         // Chart title
@@ -1606,7 +1609,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("text-anchor", "middle")
             .style("font-size", "22px")
             .style("font-weight", "600")
-            .style("fill", "#4b5563")
+            .style("fill", "#111827")
             .text("The Melting Polar Ice Caps");
 
         // Divider line at 2014/2015
@@ -1876,7 +1879,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .attr("x", 28)
             .attr("y", (d, i) => i * 30 + 8)
             .attr("font-size", "13px")
-            .attr("fill", "#4b5563")
+            .attr("fill", "#111827")
             .text(d => d.label);
 
         // Initial display - show all historical data

@@ -746,6 +746,46 @@ button:hover {
     accent-color: #38bdf8;
 }
 
+.clear-all-btn {
+    color: #111827 !important;
+    background: #f3f4f6 !important;
+    font-weight: 500;
+}
+
+.clear-all-btn:hover {
+    background: #e5e7eb !important;
+}
+
+/* Global axis styling for all charts */
+.axis path,
+.axis line {
+    stroke: #111827 !important;
+    stroke-width: 1 !important;
+    opacity: 1 !important;
+}
+
+.axis text {
+    fill: #111827 !important;
+    font-size: 12px !important;
+    opacity: 1 !important;
+}
+
+.x-axis path,
+.x-axis line,
+.y-axis path,
+.y-axis line {
+    stroke: #111827 !important;
+    stroke-width: 1 !important;
+    opacity: 1 !important;
+}
+
+.x-axis text,
+.y-axis text {
+    fill: #111827 !important;
+    font-size: 12px !important;
+    opacity: 1 !important;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     body > * {
