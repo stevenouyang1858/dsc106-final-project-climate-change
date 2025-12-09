@@ -1039,7 +1039,7 @@ function initStripesAndCountryMap() {
 
 
 function drawRegionalComparison(containerId, csvPath) {
-    const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+    const margin = { top: 100, right: 40, bottom: 60, left: 80 };
     const width = 900 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
@@ -1068,21 +1068,9 @@ function drawRegionalComparison(containerId, csvPath) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const defaultCountries = ["USA", "China", "India", "Germany"];
-    let selectedCountries = [...defaultCountries];
-    let allData = null;
-
-    const countryColors = [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
-        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
-        "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5"
-    ];
-
-    const colorScale = d3.scaleOrdinal().range(countryColors);
-
     const tooltip = d3.select("body")
         .append("div")
-        .attr("class", "tooltip-regional") 
+        .attr("class", "tooltip-regional")
         .style("position", "fixed")
         .style("background", "white")
         .style("border", "1px solid #ccc")
@@ -1096,112 +1084,313 @@ function drawRegionalComparison(containerId, csvPath) {
     const controlBox = container
         .append("div")
         .attr("class", "country-controls")
-        .style("flex", "0 0 260px")
+        .style("flex", "0 0 280px")
         .style("font-size", "11px");
+
+    let allData = [];
+    let uniqueCountries = [];
+    let selectedCountries = [];
+    let viewMode = "country";
+
+    const historicalScenarioId = "historical";
+    const scenarioMeta = [
+        { id: "ssp126", label: "SSP1-2.6", color: "teal" },
+        { id: "ssp245", label: "SSP2-4.5", color: "blue" },
+        { id: "ssp370", label: "SSP3-7.0", color: "orange" },
+        { id: "ssp585", label: "SSP5-8.5", color: "red" }
+    ];
+
+    let activeScenarios = new Set(scenarioMeta.map(s => s.id));
+    let focusScenario = "ssp245";
+
+    const countryColors = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+        "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5"
+    ];
+    const colorScale = d3.scaleOrdinal().range(countryColors);
+
+    let x, y, line, anomalyFormat, subtitle;
 
     controlBox.append("div")
         .style("font-weight", "bold")
         .style("margin-bottom", "6px")
+        .text("View Mode:");
+
+    const modeBox = controlBox.append("div")
+        .style("display", "flex")
+        .style("flex-direction", "column")
+        .style("gap", "6px")
+        .style("margin-bottom", "12px");
+
+    const modes = [
+        { id: "country", label: "1 country with multiple scenarios" },
+        { id: "scenario", label: "1 scenario with multiple countries" }
+    ];
+
+    const modeOptions = modeBox.selectAll(".mode-option")
+        .data(modes)
+        .enter()
+        .append("label")
+        .attr("class", "mode-option")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "8px")
+        .style("padding", "8px 10px")
+        .style("border-radius", "8px")
+        .style("border", d => d.id === viewMode ? "2px solid #111" : "1px solid #ccc")
+        .style("background", d => d.id === viewMode ? "#f0f0f0" : "#fff")
+        .style("cursor", "pointer")
+        .style("font-size", "12px");
+
+    modeOptions.append("input")
+        .attr("type", "radio")
+        .attr("name", "view-mode")
+        .attr("value", d => d.id)
+        .property("checked", d => d.id === viewMode)
+        .on("change", function (event, d) {
+            if (!this.checked) return;
+            viewMode = d.id;
+
+            modeOptions
+                .style("border", m => m.id === viewMode ? "2px solid #111" : "1px solid #ccc")
+                .style("background", m => m.id === viewMode ? "#f0f0f0" : "#fff");
+
+            if (viewMode === "country") {
+                // scenario -> country:
+                if (uniqueCountries.length > 0) {
+                    selectedCountries = [...uniqueCountries];
+                } else {
+                    selectedCountries = [];
+                }
+                activeScenarios = new Set(scenarioMeta.map(s => s.id));
+                syncCountryCheckboxes();
+            } else {
+                // country -> scenario:
+                focusScenario = "ssp245";
+                selectedCountries = [];
+                syncCountryCheckboxes();
+            }
+
+            updateScenarioControlsVisibility();
+            resetScenarioButtons();
+            updateLines();
+        });
+
+    modeOptions.append("span").text(d => d.label);
+
+    // Scenario controls
+    const scenarioControls = controlBox.append("div")
+        .attr("class", "scenario-controls")
+        .style("margin-top", "4px")
+        .style("margin-bottom", "12px");
+
+    scenarioControls.append("div")
+        .style("font-weight", "bold")
+        .style("margin-bottom", "4px")
+        .text("Scenarios:");
+
+    // Country mode
+    const scenarioMultiBox = scenarioControls.append("div")
+        .attr("id", "scenario-multi-box")
+        .style("display", "block");
+
+    scenarioMultiBox.append("div")
+        .style("font-size", "11px")
+        .style("margin-bottom", "4px")
+        .text("Country mode: Selected SSPs");
+
+    const scenarioMultiOptions = scenarioMultiBox.selectAll(".scenario-multi-option")
+        .data(scenarioMeta)
+        .enter()
+        .append("label")
+        .attr("class", "scenario-multi-option")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "8px")
+        .style("padding", "6px 8px")
+        .style("border-radius", "6px")
+        .style("border", d => activeScenarios.has(d.id) ? `2px solid ${d.color}` : "1px solid #ccc")
+        .style("background", d => activeScenarios.has(d.id) ? d.color : "#fff")
+        .style("color", d => activeScenarios.has(d.id) ? "#fff" : "#000")
+        .style("cursor", "pointer")
+        .style("font-size", "11px")
+        .style("margin-bottom", "4px");
+
+    scenarioMultiOptions.append("input")
+        .attr("type", "checkbox")
+        .attr("value", d => d.id)
+        .property("checked", d => activeScenarios.has(d.id))
+        .on("change", function (event, d) {
+            if (this.checked) {
+                activeScenarios.add(d.id);
+            } else {
+                activeScenarios.delete(d.id);
+                if (activeScenarios.size === 0) {
+                    activeScenarios.add(d.id);
+                }
+            }
+            resetScenarioButtons();
+            updateLines();
+        });
+
+    scenarioMultiOptions.append("span").text(d => d.label);
+
+    const scenarioSingleBox = scenarioControls.append("div")
+        .attr("id", "scenario-single-box")
+        .style("display", "none");
+
+    scenarioSingleBox.append("div")
+        .style("font-size", "11px")
+        .style("margin-bottom", "4px")
+        .text("Scenario mode: pick one SSP");
+
+    const scenarioSingleOptions = scenarioSingleBox.selectAll(".scenario-single-option")
+        .data(scenarioMeta)
+        .enter()
+        .append("label")
+        .attr("class", "scenario-single-option")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "8px")
+        .style("padding", "6px 8px")
+        .style("border-radius", "6px")
+        .style("border", d => (d.id === focusScenario ? `2px solid ${d.color}` : "1px solid #ccc"))
+        .style("background", d => (d.id === focusScenario ? d.color : "#fff"))
+        .style("color", d => (d.id === focusScenario ? "#fff" : "#000"))
+        .style("cursor", "pointer")
+        .style("font-size", "11px")
+        .style("margin-bottom", "4px");
+
+    scenarioSingleOptions.append("input")
+        .attr("type", "radio")
+        .attr("name", "scenario-focus")
+        .attr("value", d => d.id)
+        .property("checked", d => d.id === focusScenario)
+        .on("change", function (event, d) {
+            if (!this.checked) return;
+            focusScenario = d.id;
+            resetScenarioButtons();
+            updateLines();
+        });
+
+    scenarioSingleOptions.append("span").text(d => d.label);
+
+    function updateScenarioControlsVisibility() {
+        scenarioMultiBox.style("display", viewMode === "country" ? "block" : "none");
+        scenarioSingleBox.style("display", viewMode === "scenario" ? "block" : "none");
+    }
+
+    function resetScenarioButtons() {
+        scenarioMultiOptions
+            .style("border", s => activeScenarios.has(s.id) ? `2px solid ${s.color}` : "1px solid #ccc")
+            .style("background", s => activeScenarios.has(s.id) ? s.color : "#fff")
+            .style("color", s => activeScenarios.has(s.id) ? "#fff" : "#000");
+
+        scenarioSingleOptions
+            .style("border", s => (s.id === focusScenario ? `2px solid ${s.color}` : "1px solid #ccc"))
+            .style("background", s => (s.id === focusScenario ? s.color : "#fff"))
+            .style("color", s => (s.id === focusScenario ? "#fff" : "#000"));
+    }
+
+    // Country selection UI
+    controlBox.append("div")
+        .style("font-weight", "bold")
+        .style("margin-top", "6px")
+        .style("margin-bottom", "6px")
         .text("Select Countries:");
 
-    // search box
     const searchInput = controlBox.append("input")
         .attr("type", "text")
         .attr("placeholder", "Search...")
         .style("width", "96%")
-        .style("margin-bottom", "8px")
-        .style("padding", "4px");
-
-    
-    const clearButton = controlBox.append("button")
-    .text("Clear All")
-    .style("margin-bottom", "10px")
-    .style("padding", "6px 10px")
-    .style("width", "90%")
-    .style("margin-left", "auto")
-    .style("margin-right", "auto")
-    .style("cursor", "pointer")
-    .style("background", "#eee")
-    .style("border", "1px solid #ccc")
-    .style("border-radius", "4px")
-    .style("font-size", "12px")
-    .on("click", () => {
-        searchInput.property("value", "");
-        countryCheckboxes.selectAll(".country-option").style("display", null);
-        countryCheckboxes.selectAll("input[type='checkbox']")
-            .property("checked", false);
-        selectedCountries = [];
-        svg.selectAll(".country-line").remove();
-        svg.selectAll(".country-points").remove();
-        svg.selectAll(".legend").remove();
-        updateLines();
-    });
-
+        .style("margin-bottom", "6px")
+        .style("padding", "6px 8px")
+        .style("font-size", "11px");
 
     const countryCheckboxes = controlBox.append("div")
         .attr("id", "country-checkboxes")
         .style("max-height", "60vh")
         .style("overflow-y", "auto")
-        .style("border", "1px solid #ddd")
+        .style("border", "1px solid #ccc")
         .style("padding", "10px")
         .style("background-color", "white")
         .style("border-radius", "4px");
 
+    const clearButton = controlBox.append("button")
+        .text("Clear / Reset Selection")
+        .style("margin-top", "8px")
+        .style("padding", "8px 10px")
+        .style("width", "96%")
+        .style("cursor", "pointer")
+        .style("background", "#eee")
+        .style("border", "1px solid, #ccc")
+        .style("border-radius", "6px")
+        .style("font-size", "12px")
+        .on("click", () => {
+            searchInput.property("value", "");
+            countryCheckboxes.selectAll(".country-option").style("display", null);
+
+            if (viewMode === "country" && uniqueCountries.length > 0) {
+                selectedCountries = [...uniqueCountries];
+            } else {
+                selectedCountries = [];
+            }
+            syncCountryCheckboxes();
+            updateLines();
+        });
+
+    function syncCountryCheckboxes() {
+        countryCheckboxes.selectAll("input[type='checkbox']")
+            .property("checked", d => selectedCountries.includes(d));
+    }
+
+    // Load data
     d3.csv(csvPath, d => ({
         country: d.CountryName,
         year: +d.year,
+        scenario: d.scenario,
         anomaly: +d.anomaly
     })).then(data => {
         allData = data;
 
-        const historicalData = data.filter(d => d.year <= 2014);
-
+        const hist = allData.filter(d => d.scenario === historicalScenarioId);
         const countryDataCounts = d3.rollup(
-            historicalData,
+            hist,
             v => v.length,
             d => d.country
         );
 
-        const uniqueCountries = Array.from(countryDataCounts.entries())
+        uniqueCountries = Array.from(countryDataCounts.entries())
             .filter(([, count]) => count >= 10)
             .map(([country]) => country)
             .sort();
 
-        const validDefaultCountries = defaultCountries.filter(c => uniqueCountries.includes(c));
-        if (validDefaultCountries.length === 0 && uniqueCountries.length > 0) {
-            selectedCountries = uniqueCountries.slice(0, 6);
-        } else {
-            selectedCountries = validDefaultCountries.length > 0
-                ? validDefaultCountries
-                : uniqueCountries.slice(0, 6);
-        }
+        selectedCountries = [...uniqueCountries];
 
-        // Scales
-        const x = d3.scaleLinear()
-            .domain(d3.extent(historicalData, d => d.year))
+        x = d3.scaleLinear()
+            .domain(d3.extent(allData, d => d.year))
             .range([0, width]);
 
-        const yExtent = d3.extent(historicalData, d => d.anomaly);
+        const yExtent = d3.extent(allData, d => d.anomaly);
         const maxAbs = Math.max(Math.abs(yExtent[0] || 0), Math.abs(yExtent[1] || 0));
-        const y = d3.scaleLinear()
+        y = d3.scaleLinear()
             .domain([-maxAbs, maxAbs])
             .range([height, 0]);
 
-        // Line generator
-        const line = d3.line()
+        line = d3.line()
             .x(d => x(d.year))
             .y(d => y(d.anomaly))
             .curve(d3.curveMonotoneX);
-        
-        const anomalyFormat = d3.format("+.2f");
+
+        anomalyFormat = d3.format("+.2f");
 
         // Axes
         svg.append("g")
             .attr("transform", `translate(0,${height})`)
             .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
-        svg.append("g")
-            .call(d3.axisLeft(y));
+        svg.append("g").call(d3.axisLeft(y));
 
         // Axis labels
         svg.append("text")
@@ -1219,119 +1408,55 @@ function drawRegionalComparison(containerId, csvPath) {
             .attr("font-size", "14px")
             .text("Temperature Anomaly (°C)");
 
-        // Chart title
         svg.append("text")
             .attr("class", "chart-title")
             .attr("x", width / 2)
-            .attr("y", -margin.top / 2)
+            .attr("y", -50)
             .attr("text-anchor", "middle")
             .style("font-size", "20px")
             .style("font-weight", "600")
             .text("Regional Temperature Trends: Different Places, Different Warming Rates");
 
-        // ---- update lines + legend ----
-        function updateLines() {
-            const filteredData = historicalData.filter(d => selectedCountries.includes(d.country));
-            const dataByCountry = d3.group(filteredData, d => d.country);
+        subtitle = svg.append("text")
+            .attr("class", "chart-subtitle")
+            .attr("x", width / 2)
+            .attr("y", -margin.top / 2 + 25)
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px")
+            .style("font-weight", "500")
+            .style("fill", "#555")
+            .text("");
 
-            colorScale.domain(selectedCountries);
+        svg.append("line")
+            .attr("class", "divider-line")
+            .attr("x1", x(2014))
+            .attr("x2", x(2014))
+            .attr("y1", 0)
+            .attr("y2", height)
+            .attr("stroke", "#666")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "6 3")
+            .style("opacity", 0.6);
 
-            svg.selectAll(".country-line").remove();
-            svg.selectAll(".country-points").remove();
-            svg.selectAll(".legend").remove();
+        svg.append("text")
+            .attr("x", x(2014))
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "11px")
+            .attr("fill", "#666")
+            .text("Historical → Projected");
 
-            dataByCountry.forEach((values, country) => {
-                const sortedValues = Array.from(values).sort((a, b) => a.year - b.year);
-                const color = colorScale(country);
-                const classSafe = country.replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-
-                // line
-                svg.append("path")
-                    .datum(sortedValues)
-                    .attr("class", "country-line")
-                    .attr("fill", "none")
-                    .attr("stroke", color)
-                    .attr("stroke-width", 2.5)
-                    .attr("d", line)
-                    .style("opacity", 0.8);
-
-                // Points with hover
-                svg.selectAll(`.point-${classSafe}`)
-                    .data(sortedValues)
-                    .join("circle")
-                    .attr("class", `country-points point-${classSafe}`)
-                    .attr("cx", d => x(d.year))
-                    .attr("cy", d => y(d.anomaly))
-                    .attr("r", 5)
-                    .attr("fill", color)
-                    .style("opacity", 0)
-                    .on("mouseover", function(event, d) {
-                        const [mx, my] = d3.pointer(event, container.node());
-
-                        tooltip
-                            .html(`
-                                <strong>${country}</strong><br>
-                                Year: ${d.year}<br>
-                                Anomaly: ${anomalyFormat(d.anomaly)}°C
-                            `)
-                            .style("left", (mx + 10) + "px")
-                            .style("top", (my - 10) + "px")
-                            .style("opacity", 1);
-
-                        d3.select(this)
-                            .attr("r", 7)
-                            .style("opacity", 1);
-                    })
-                    .on("mousemove", function(event) {
-                        const [mx, my] = d3.pointer(event, container.node());
-                        tooltip
-                            .style("left", (mx + 10) + "px")
-                            .style("top", (my - 10) + "px");
-                    })
-                    .on("mouseout", function() {
-                        tooltip.style("opacity", 0);
-
-                        d3.select(this)
-                            .attr("r", 5)
-                            .style("opacity", 0);
-                    });
-            });
-
-            // legend in top-left of chart
-            const legend = svg.append("g")
-                .attr("class", "legend")
-                .attr("transform", `translate(25, 0)`)
-
-            selectedCountries.forEach((country, i) => {
-                const legendItem = legend.append("g")
-                    .attr("transform", `translate(0, ${i * 18})`);
-
-                legendItem.append("line")
-                    .attr("x1", 0)
-                    .attr("x2", 15)
-                    .attr("y1", 0)
-                    .attr("y2", 0)
-                    .attr("stroke", colorScale(country))
-                    .attr("stroke-width", 2.5);
-
-                legendItem.append("text")
-                    .attr("x", 20)
-                    .attr("y", 4)
-                    .attr("font-size", "11px")
-                    .text(country);
-            });
-        }
-
-        // build checkbox list
-        const topCountries = uniqueCountries.slice(0, 200);
+        // Country checkbox list
         const options = countryCheckboxes.selectAll(".country-option")
-            .data(topCountries)
+            .data(uniqueCountries)
             .enter()
             .append("div")
             .attr("class", "country-option")
-            .style("margin-bottom", "4px");
+            .style("margin-bottom", "4px")
+            .style("display", "flex")
+            .style("align-items", "center");
 
-        options.each(function(country) {
+        options.each(function (country) {
             const row = d3.select(this);
             const id = `checkbox-${containerId}-${country.replace(/\s+/g, "-").replace(/[^\w-]/g, "")}`;
 
@@ -1340,13 +1465,18 @@ function drawRegionalComparison(containerId, csvPath) {
                 .attr("value", country)
                 .attr("id", id)
                 .property("checked", selectedCountries.includes(country))
-                .on("change", function() {
-                    if (this.checked) {
-                        if (!selectedCountries.includes(country)) {
-                            selectedCountries.push(country);
-                        }
+                .on("change", function () {
+                    if (viewMode === "country") {
+                        selectedCountries = [country];
+                        syncCountryCheckboxes();
                     } else {
-                        selectedCountries = selectedCountries.filter(c => c !== country);
+                        if (this.checked) {
+                            if (!selectedCountries.includes(country)) {
+                                selectedCountries.push(country);
+                            }
+                        } else {
+                            selectedCountries = selectedCountries.filter(c => c !== country);
+                        }
                     }
                     updateLines();
                 });
@@ -1359,7 +1489,7 @@ function drawRegionalComparison(containerId, csvPath) {
         });
 
         // search filter
-        searchInput.on("input", function() {
+        searchInput.on("input", function () {
             const term = this.value.trim().toLowerCase();
             countryCheckboxes.selectAll(".country-option")
                 .style("display", d =>
@@ -1367,11 +1497,251 @@ function drawRegionalComparison(containerId, csvPath) {
                 );
         });
 
-        // initial draw
+        updateScenarioControlsVisibility();
+        resetScenarioButtons();
         updateLines();
     }).catch(err => console.error(err));
-}
 
+    // core redraw
+    function updateLines() {
+        // Clear everything we draw dynamically
+        svg.selectAll(".hist-line, .ssp-line, .country-line, .country-points, .legend").remove();
+        if (selectedCountries.length === 1) {
+            subtitle.text(selectedCountries[0]);
+        } else {
+            subtitle.text("");  // hide subtitle when 0 or many countries are selected
+        }
+        if (!allData.length || !x || !y || !line) return;
+        if (!selectedCountries.length) return;
+
+        if (viewMode === "country") {
+            // ---- COUNTRY MODE: 1 country x multiple scenarios ----
+            const country = selectedCountries[0];
+            const countryData = allData.filter(d => d.country === country);
+
+            // --- Historical: always black, own class, inline stroke ---
+            const hist = countryData
+                .filter(d => d.scenario === historicalScenarioId)
+                .sort((a, b) => a.year - b.year);
+
+            if (hist.length > 0) {
+                svg.append("path")
+                    .datum(hist)
+                    .attr("class", "hist-line")
+                    .attr("fill", "none")
+                    .style("stroke", "#111")          // inline style beats CSS
+                    .style("stroke-width", 2.5)
+                    .attr("d", line)
+                    .style("opacity", 0.9);
+
+                svg.selectAll(".point-hist")
+                    .data(hist)
+                    .enter()
+                    .append("circle")
+                    .attr("class", "country-points point-hist")
+                    .attr("cx", d => x(d.year))
+                    .attr("cy", d => y(d.anomaly))
+                    .attr("r", 4)
+                    .style("fill", "#111")
+                    .style("opacity", 0)
+                    .on("mouseover", function (event, d) {
+                        tooltip
+                            .html(`
+                                <strong>${country}</strong><br>
+                                Scenario: Historical<br>
+                                Year: ${d.year}<br>
+                                Anomaly: ${anomalyFormat(d.anomaly)}°C
+                            `)
+                            .style("left", (event.clientX + 10) + "px")
+                            .style("top", (event.clientY - 10) + "px")
+                            .style("opacity", 1);
+                        d3.select(this)
+                            .attr("r", 6)
+                            .style("opacity", 1);
+                    })
+                    .on("mousemove", function (event) {
+                        tooltip
+                            .style("left", (event.clientX + 10) + "px")
+                            .style("top", (event.clientY - 10) + "px");
+                    })
+                    .on("mouseout", function () {
+                        tooltip.style("opacity", 0);
+                        d3.select(this)
+                            .attr("r", 4)
+                            .style("opacity", 0);
+                    });
+            }
+
+            // --- SSPs: each with its own color + class, inline stroke ---
+            activeScenarios.forEach(sid => {
+                const meta = scenarioMeta.find(s => s.id === sid);
+                if (!meta) return;
+
+                const arr = countryData
+                    .filter(d => d.scenario === sid)
+                    .sort((a, b) => a.year - b.year);
+
+                if (!arr.length) return;
+
+                svg.append("path")
+                    .datum(arr)
+                    .attr("class", `ssp-line ssp-${sid}`)
+                    .attr("fill", "none")
+                    .style("stroke", meta.color)      // inline style
+                    .style("stroke-width", 2.5)
+                    .attr("d", line)
+                    .style("opacity", 0.9);
+
+                svg.selectAll(`.point-${sid}`)
+                    .data(arr)
+                    .enter()
+                    .append("circle")
+                    .attr("class", `country-points point-${sid}`)
+                    .attr("cx", d => x(d.year))
+                    .attr("cy", d => y(d.anomaly))
+                    .attr("r", 4)
+                    .style("fill", meta.color)
+                    .style("opacity", 0)
+                    .on("mouseover", function (event, d) {
+                        tooltip
+                            .html(`
+                                <strong>${country}</strong><br>
+                                Scenario: ${meta.label}<br>
+                                Year: ${d.year}<br>
+                                Anomaly: ${anomalyFormat(d.anomaly)}°C
+                            `)
+                            .style("left", (event.clientX + 10) + "px")
+                            .style("top", (event.clientY - 10) + "px")
+                            .style("opacity", 1);
+                        d3.select(this)
+                            .attr("r", 6)
+                            .style("opacity", 1);
+                    })
+                    .on("mousemove", function (event) {
+                        tooltip
+                            .style("left", (event.clientX + 10) + "px")
+                            .style("top", (event.clientY - 10) + "px");
+                    })
+                    .on("mouseout", function () {
+                        tooltip.style("opacity", 0);
+                        d3.select(this)
+                            .attr("r", 4)
+                            .style("opacity", 0);
+                    });
+            });
+
+            // Legend
+            const legendItems = scenarioMeta.filter(s => activeScenarios.has(s.id));
+
+            const legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", `translate(25, 0)`);
+
+            legendItems.forEach((item, i) => {
+                const legendItem = legend.append("g")
+                    .attr("transform", `translate(0, ${i * 18})`);
+
+                legendItem.append("line")
+                    .attr("x1", 0)
+                    .attr("x2", 15)
+                    .attr("y1", 0)
+                    .attr("y2", 0)
+                    .style("stroke", item.color)
+                    .style("stroke-width", 2.5);
+
+                legendItem.append("text")
+                    .attr("x", 20)
+                    .attr("y", 4)
+                    .attr("font-size", "11px")
+                    .text(item.label);
+            });
+
+        } else {
+            const dataForScenario = allData.filter(d => d.scenario === focusScenario);
+            const filteredData = dataForScenario.filter(d => selectedCountries.includes(d.country));
+            const dataByCountry = d3.group(filteredData, d => d.country);
+            colorScale.domain(selectedCountries);
+
+            dataByCountry.forEach((values, country) => {
+                const sortedValues = Array.from(values).sort((a, b) => a.year - b.year);
+                const color = colorScale(country);
+                const classSafe = country.replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+
+                svg.append("path")
+                    .datum(sortedValues)
+                    .attr("class", "country-line")
+                    .attr("fill", "none")
+                    .style("stroke", color)          // inline style
+                    .style("stroke-width", 2.5)
+                    .attr("d", line)
+                    .style("opacity", 0.85);
+
+                svg.selectAll(`.point-${classSafe}`)
+                    .data(sortedValues)
+                    .enter()
+                    .append("circle")
+                    .attr("class", `country-points point-${classSafe}`)
+                    .attr("cx", d => x(d.year))
+                    .attr("cy", d => y(d.anomaly))
+                    .attr("r", 4)
+                    .style("fill", color)
+                    .style("opacity", 0)
+                    .on("mouseover", function (event, d) {
+                        const meta = scenarioMeta.find(s => s.id === focusScenario);
+                        tooltip
+                            .html(`
+                                <strong>${country}</strong><br>
+                                Scenario: ${meta ? meta.label : focusScenario}<br>
+                                Year: ${d.year}<br>
+                                Anomaly: ${anomalyFormat(d.anomaly)}°C
+                            `)
+                            .style("left", (event.clientX + 10) + "px")
+                            .style("top", (event.clientY - 10) + "px")
+                            .style("opacity", 1);
+                        d3.select(this)
+                            .attr("r", 6)
+                            .style("opacity", 1);
+                    })
+                    .on("mousemove", function (event) {
+                        tooltip
+                            .style("left", (event.clientX + 10) + "px")
+                            .style("top", (event.clientY - 10) + "px");
+                    })
+                    .on("mouseout", function () {
+                        tooltip.style("opacity", 0);
+                        d3.select(this)
+                            .attr("r", 4)
+                            .style("opacity", 0);
+                    });
+            });
+
+            // Legend: countries
+            const legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", `translate(25, 0)`);
+
+            selectedCountries.forEach((country, i) => {
+                const legendItem = legend.append("g")
+                    .attr("transform", `translate(0, ${i * 18})`);
+
+                legendItem.append("line")
+                    .attr("x1", 0)
+                    .attr("x2", 15)
+                    .attr("y1", 0)
+                    .attr("y2", 0)
+                    .style("stroke", colorScale(country))
+                    .style("stroke-width", 2.5);
+
+                legendItem.append("text")
+                    .attr("x", 20)
+                    .attr("y", 4)
+                    .attr("font-size", "11px")
+                    .text(country);
+            });
+        }
+    }
+
+}
 
 
 function drawSeaIceConcentration(containerId, csvPath) {
@@ -1789,7 +2159,7 @@ drawCO2LineChart(
 
 initStripesAndCountryMap();
 
-drawRegionalComparison("regional-comparison", "./data/country_temp_anomaly_1950_2050.csv");
+drawRegionalComparison("regional-comparison", "./data/tas_country_anomaly_1950_2050_all.csv");
 
 drawSeaIceConcentration("decade-warming", "./data/siconc_annual_mean_polar.csv");
 
