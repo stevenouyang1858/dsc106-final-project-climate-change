@@ -713,7 +713,7 @@ function initStripesAndCountryMap() {
   let mapColorScale;
 
   let selectedYear = null;
-
+  
   // load data
   Promise.all([
     d3.csv(stripesCsv, d3.autoType),
@@ -791,7 +791,7 @@ function initStripesAndCountryMap() {
       });
     }
   });
-
+  
 
   // stripes 
   function drawStripes() {
@@ -1009,7 +1009,7 @@ function initStripesAndCountryMap() {
         return a == null || isNaN(a) ? noDataColor : mapColorScale(a);
       });
 
-    const txt = `Country-level anomalies in ${year} (vs 1950–1980 baseline)`;
+    const txt = `Country-level anomalies in ${year}`;
     mapTitle.text("Country Anomaly Map");
     mapYearLabel.text(txt);
   }
@@ -1036,7 +1036,6 @@ function initStripesAndCountryMap() {
     }
   }
 }
-
 
 
 function drawRegionalComparison(containerId, csvPath) {
@@ -1095,10 +1094,10 @@ function drawRegionalComparison(containerId, csvPath) {
 
     const historicalScenarioId = "historical";
     const scenarioMeta = [
-        { id: "ssp126", label: "SSP1-2.6", color: "teal" },
-        { id: "ssp245", label: "SSP2-4.5", color: "blue" },
-        { id: "ssp370", label: "SSP3-7.0", color: "orange" },
-        { id: "ssp585", label: "SSP5-8.5", color: "red" }
+        { id: "ssp126", label: "SSP1-2.6 (Low emissions)", color: "teal" },
+        { id: "ssp245", label: "SSP2-4.5 (Medium emissions)", color: "blue" },
+        { id: "ssp370", label: "SSP3-7.0 (High emissions)", color: "orange" },
+        { id: "ssp585", label: "SSP5-8.5 (Very high emissions)", color: "red" }
     ];
 
     let activeScenarios = new Set(scenarioMeta.map(s => s.id));
@@ -1304,7 +1303,7 @@ function drawRegionalComparison(containerId, csvPath) {
     const searchInput = controlBox.append("input")
         .attr("type", "text")
         .attr("placeholder", "Search...")
-        .style("width", "96%")
+        .style("width", "93%")
         .style("margin-bottom", "6px")
         .style("padding", "6px 8px")
         .style("font-size", "11px");
@@ -1319,10 +1318,10 @@ function drawRegionalComparison(containerId, csvPath) {
         .style("border-radius", "4px");
 
     const clearButton = controlBox.append("button")
-        .text("Clear / Reset Selection")
+        .text("Clear Selection")
         .style("margin-top", "8px")
         .style("padding", "8px 10px")
-        .style("width", "96%")
+        .style("width", "100%")
         .style("cursor", "pointer")
         .style("background", "#eee")
         .style("border", "1px solid, #ccc")
@@ -1785,31 +1784,26 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .domain([d3.min(allData, d => d.siconc) * 0.85, d3.max(allData, d => d.siconc) * 1.08])
             .range([height, 0]);
 
-        // Unified gradient for continuous sea ice effect across historical and projected
-        const iceGradientUnified = svg.append("defs")
+        const iceGradient = svg.append("defs")
             .append("linearGradient")
-            .attr("id", "iceGradientUnified")
-            .attr("x1", "0").attr("y1", "0")
-            .attr("x2", "0").attr("y2", "1")
-            .attr("gradientUnits", "objectBoundingBox");
+            .attr("id", "iceGradient")
+            .attr("x1", "0%").attr("y1", "0%")
+            .attr("x2", "0%").attr("y2", "100%");
 
-        // Slightly bright / icy at the top
-        iceGradientUnified.append("stop")
+        iceGradient.append("stop")
             .attr("offset", "0%")
-            .attr("stop-color", "#f4fbff")
-            .attr("stop-opacity", "0.95");
+            .attr("stop-color", "#E0F2FE")
+            .attr("stop-opacity", 0.8);
 
-        // Middle transition
-        iceGradientUnified.append("stop")
-            .attr("offset", "45%")
-            .attr("stop-color", "#b7e1ff")
-            .attr("stop-opacity", "0.90");
+        iceGradient.append("stop")
+            .attr("offset", "50%")
+            .attr("stop-color", "#BAE6FD")
+            .attr("stop-opacity", 0.6);
 
-        // Deeper blue near the bottom
-        iceGradientUnified.append("stop")
+        iceGradient.append("stop")
             .attr("offset", "100%")
-            .attr("stop-color", "#76b8f5")
-            .attr("stop-opacity", "0.85");
+            .attr("stop-color", "#7DD3FC")
+            .attr("stop-opacity", 0.4);
 
         const area = d3.area()
             .x(d => x(d.year))
@@ -1882,14 +1876,14 @@ function drawSeaIceConcentration(containerId, csvPath) {
         const historicalArea = svg.append("path")
             .datum(historicalData)
             .attr("class", "ice-area historical")
-            .attr("fill", "url(#iceGradientUnified)")
-            .attr("opacity", 0.9)
+            .attr("fill", "url(#iceGradient)")
+            .attr("opacity", 0.7)
             .attr("d", area);
 
         const projectedArea = svg.append("path")
             .datum(projectedData)
             .attr("class", "ice-area projected")
-            .attr("fill", "url(#iceGradientUnified)")
+            .attr("fill", "url(#iceGradient)")
             .attr("opacity", 0)
             .attr("d", area);
 
@@ -1963,7 +1957,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 projectedArea
                     .datum(projToShow)
                     .attr("d", area)
-                    .attr("opacity", 0.6);
+                    .attr("opacity", 0.5);
 
                 projectedLine
                     .datum(projToShow)
