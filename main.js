@@ -1784,26 +1784,28 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .domain([d3.min(allData, d => d.siconc) * 0.85, d3.max(allData, d => d.siconc) * 1.08])
             .range([height, 0]);
 
-        const iceGradient = svg.append("defs")
+        // Base ice gradient - unified for both historical and projected areas
+        const iceGradientBase = svg.append("defs")
             .append("linearGradient")
-            .attr("id", "iceGradient")
-            .attr("x1", "0%").attr("y1", "0%")
-            .attr("x2", "0%").attr("y2", "100%");
+            .attr("id", "iceGradientBase")
+            .attr("x1", "0").attr("y1", "0")
+            .attr("x2", "0").attr("y2", "1")
+            .attr("gradientUnits", "objectBoundingBox");
 
-        iceGradient.append("stop")
+        iceGradientBase.append("stop")
             .attr("offset", "0%")
-            .attr("stop-color", "#E0F2FE")
-            .attr("stop-opacity", 0.8);
+            .attr("stop-color", "#f4fbff")
+            .attr("stop-opacity", "0.95");
 
-        iceGradient.append("stop")
-            .attr("offset", "50%")
-            .attr("stop-color", "#BAE6FD")
-            .attr("stop-opacity", 0.6);
+        iceGradientBase.append("stop")
+            .attr("offset", "45%")
+            .attr("stop-color", "#b7e1ff")
+            .attr("stop-opacity", "0.9");
 
-        iceGradient.append("stop")
+        iceGradientBase.append("stop")
             .attr("offset", "100%")
-            .attr("stop-color", "#7DD3FC")
-            .attr("stop-opacity", 0.4);
+            .attr("stop-color", "#76b8f5")
+            .attr("stop-opacity", "0.85");
 
         const area = d3.area()
             .x(d => x(d.year))
@@ -1876,14 +1878,14 @@ function drawSeaIceConcentration(containerId, csvPath) {
         const historicalArea = svg.append("path")
             .datum(historicalData)
             .attr("class", "ice-area historical")
-            .attr("fill", "url(#iceGradient)")
-            .attr("opacity", 0.7)
+            .attr("fill", "url(#iceGradientBase)")
+            .attr("opacity", 0.9)
             .attr("d", area);
 
         const projectedArea = svg.append("path")
             .datum(projectedData)
             .attr("class", "ice-area projected")
-            .attr("fill", "url(#iceGradient)")
+            .attr("fill", "url(#iceGradientBase)")
             .attr("opacity", 0)
             .attr("d", area);
 
@@ -1957,7 +1959,7 @@ function drawSeaIceConcentration(containerId, csvPath) {
                 projectedArea
                     .datum(projToShow)
                     .attr("d", area)
-                    .attr("opacity", 0.5);
+                    .attr("opacity", 0.6);
 
                 projectedLine
                     .datum(projToShow)
