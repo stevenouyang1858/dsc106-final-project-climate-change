@@ -713,7 +713,7 @@ function initStripesAndCountryMap() {
   let mapColorScale;
 
   let selectedYear = null;
-  
+
   // load data
   Promise.all([
     d3.csv(stripesCsv, d3.autoType),
@@ -791,7 +791,7 @@ function initStripesAndCountryMap() {
       });
     }
   });
-  
+
 
   // stripes 
   function drawStripes() {
@@ -1036,6 +1036,7 @@ function initStripesAndCountryMap() {
     }
   }
 }
+
 
 
 function drawRegionalComparison(containerId, csvPath) {
