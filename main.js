@@ -1414,25 +1414,28 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .domain([d3.min(allData, d => d.siconc) * 0.85, d3.max(allData, d => d.siconc) * 1.08])
             .range([height, 0]);
 
-        // Base ice gradient - unified for both historical and projected areas
-        const iceGradientBase = svg.append("defs")
+        // Unified gradient for continuous sea ice effect across historical and projected
+        const iceGradientUnified = svg.append("defs")
             .append("linearGradient")
-            .attr("id", "iceGradientBase")
+            .attr("id", "iceGradientUnified")
             .attr("x1", "0").attr("y1", "0")
             .attr("x2", "0").attr("y2", "1")
             .attr("gradientUnits", "objectBoundingBox");
 
-        iceGradientBase.append("stop")
+        // Slightly bright / icy at the top
+        iceGradientUnified.append("stop")
             .attr("offset", "0%")
             .attr("stop-color", "#f4fbff")
             .attr("stop-opacity", "0.95");
 
-        iceGradientBase.append("stop")
+        // Middle transition
+        iceGradientUnified.append("stop")
             .attr("offset", "45%")
             .attr("stop-color", "#b7e1ff")
-            .attr("stop-opacity", "0.9");
+            .attr("stop-opacity", "0.90");
 
-        iceGradientBase.append("stop")
+        // Deeper blue near the bottom
+        iceGradientUnified.append("stop")
             .attr("offset", "100%")
             .attr("stop-color", "#76b8f5")
             .attr("stop-opacity", "0.85");
@@ -1508,14 +1511,14 @@ function drawSeaIceConcentration(containerId, csvPath) {
         const historicalArea = svg.append("path")
             .datum(historicalData)
             .attr("class", "ice-area historical")
-            .attr("fill", "url(#iceGradientBase)")
+            .attr("fill", "url(#iceGradientUnified)")
             .attr("opacity", 0.9)
             .attr("d", area);
 
         const projectedArea = svg.append("path")
             .datum(projectedData)
             .attr("class", "ice-area projected")
-            .attr("fill", "url(#iceGradientBase)")
+            .attr("fill", "url(#iceGradientUnified)")
             .attr("opacity", 0)
             .attr("d", area);
 
