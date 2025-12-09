@@ -1414,57 +1414,28 @@ function drawSeaIceConcentration(containerId, csvPath) {
             .domain([d3.min(allData, d => d.siconc) * 0.85, d3.max(allData, d => d.siconc) * 1.08])
             .range([height, 0]);
 
-        // Unified gradient for continuous sea ice effect across historical and projected
-        const iceGradientUnified = svg.append("defs")
+        // Base ice gradient - unified for both historical and projected areas
+        const iceGradientBase = svg.append("defs")
             .append("linearGradient")
-            .attr("id", "iceGradientUnified")
+            .attr("id", "iceGradientBase")
             .attr("x1", "0").attr("y1", "0")
             .attr("x2", "0").attr("y2", "1")
             .attr("gradientUnits", "objectBoundingBox");
 
-        // Slightly bright / icy at the top
-        iceGradientUnified.append("stop")
+        iceGradientBase.append("stop")
             .attr("offset", "0%")
             .attr("stop-color", "#f4fbff")
             .attr("stop-opacity", "0.95");
 
-        // Middle transition
-        iceGradientUnified.append("stop")
+        iceGradientBase.append("stop")
             .attr("offset", "45%")
             .attr("stop-color", "#b7e1ff")
-            .attr("stop-opacity", "0.90");
+            .attr("stop-opacity", "0.9");
 
-        // Deeper blue near the bottom
-        iceGradientUnified.append("stop")
+        iceGradientBase.append("stop")
             .attr("offset", "100%")
             .attr("stop-color", "#76b8f5")
             .attr("stop-opacity", "0.85");
-
-        // Horizontal gradient for projected area - fades from historical color to lighter blue
-        const iceProjectedFade = svg.append("defs")
-            .append("linearGradient")
-            .attr("id", "iceProjectedFade")
-            .attr("x1", "0%").attr("y1", "0%")
-            .attr("x2", "100%").attr("y2", "0%")
-            .attr("gradientUnits", "objectBoundingBox");
-
-        // At the dashed line: SAME color as historical ice
-        iceProjectedFade.append("stop")
-            .attr("offset", "0%")
-            .attr("stop-color", "#b7e1ff")
-            .attr("stop-opacity", "0.85");
-
-        // Midway (2050): slightly lighter
-        iceProjectedFade.append("stop")
-            .attr("offset", "50%")
-            .attr("stop-color", "#cfeaff")
-            .attr("stop-opacity", "0.55");
-
-        // At 2100: very light / almost melted
-        iceProjectedFade.append("stop")
-            .attr("offset", "100%")
-            .attr("stop-color", "#eaf6ff")
-            .attr("stop-opacity", "0.25");
 
         const area = d3.area()
             .x(d => x(d.year))
@@ -1537,14 +1508,14 @@ function drawSeaIceConcentration(containerId, csvPath) {
         const historicalArea = svg.append("path")
             .datum(historicalData)
             .attr("class", "ice-area historical")
-            .attr("fill", "url(#iceGradientUnified)")
+            .attr("fill", "url(#iceGradientBase)")
             .attr("opacity", 0.9)
             .attr("d", area);
 
         const projectedArea = svg.append("path")
             .datum(projectedData)
             .attr("class", "ice-area projected")
-            .attr("fill", "url(#iceProjectedFade)")
+            .attr("fill", "url(#iceGradientBase)")
             .attr("opacity", 0)
             .attr("d", area);
 
